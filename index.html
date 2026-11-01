@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Montrose Town Run Flow</title>
-<meta name="description" content="Estimated Uncompahgre River flow through the Montrose Water Sports Park, figured live from Colorado DWR and USGS gauges.">
+<meta name="description" content="Estimated Uncompahgre River flow through the Montrose Water Sports Park, figured live from Colorado DWR and USGS gauges, with a storm outlook from Cow Creek, NOAA's river forecast and radar.">
 <meta name="theme-color" content="#050a08">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -158,6 +158,8 @@ h1 { margin: 0; font: 400 clamp(38px, 6.4vw, 58px)/.95 var(--font-crt); color: v
 .seg button[aria-pressed="true"] { background: var(--phos); color: var(--bg); border-color: var(--phos); }
 .charts { display: grid; gap: 26px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); }
 .chart { position: relative; min-height: 240px; touch-action: pan-y; }
+#chart-cow { min-height: 190px; }
+.cell-sub { display: block; color: var(--muted); font-size: 11px; letter-spacing: .02em; }
 .chart svg { display: block; width: 100%; height: auto; }
 .chart-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); text-align: center; padding: 16px; letter-spacing: .04em; }
 .chart-msg-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bad); flex: none; }
@@ -173,6 +175,35 @@ h1 { margin: 0; font: 400 clamp(38px, 6.4vw, 58px)/.95 var(--font-crt); color: v
 .tip-when { color: var(--muted); margin-bottom: 4px; letter-spacing: .04em; }
 .tip-row { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
 .tip-sw { width: 8px; height: 8px; flex: none; }
+.outlook { display: grid; gap: 26px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "park" "cowc" "radar"; }
+@media (min-width: 1040px) {
+  .outlook { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-areas: "park radar" "cowc radar"; align-items: start; }
+}
+.a-park { grid-area: park; } .a-cowc { grid-area: cowc; } .a-radar { grid-area: radar; }
+.headline { margin: 0; font: 400 clamp(24px, 3.2vw, 30px)/1.08 var(--font-crt); color: var(--ink); letter-spacing: .02em; max-width: 46ch; }
+.headline[data-level="rise"] { color: var(--phos); text-shadow: 0 0 10px rgba(99, 245, 162, .3); }
+.facts { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-2); }
+.facts li::before { content: "> "; color: var(--muted); }
+.line-fc { stroke-dasharray: 8 5; stroke-linecap: butt; }
+.line-nc { stroke-dasharray: 3 4; stroke-linecap: butt; }
+.nowline { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 2 3; }
+.nowlab { fill: var(--ink-2); font: 500 10px var(--font-mono); letter-spacing: .12em; }
+.annot { fill: var(--ink); font: 500 11px var(--font-mono); font-variant-numeric: tabular-nums; paint-order: stroke fill; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
+.basin-map { position: relative; min-height: 280px; }
+.basin-map svg { display: block; width: 100%; height: auto; }
+.b-basin { fill: none; stroke: var(--ink-2); stroke-width: 1.2; stroke-opacity: .75; }
+.b-creek { fill: none; stroke: var(--river); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.b-river { fill: none; stroke: var(--river); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.b-lab-t, .b-lab-v { paint-order: stroke fill; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
+.b-lab-t { fill: var(--ink-2); font: 500 10px var(--font-mono); letter-spacing: .08em; }
+.b-lab-v { fill: var(--ink); font: 600 12px var(--font-mono); font-variant-numeric: tabular-nums; }
+.narrow .b-lab-t { font-size: 8.5px; letter-spacing: .05em; }
+.narrow .b-lab-v { font-size: 10.5px; }
+.ramp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; margin: 0; padding: 0; list-style: none; font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ramp li { display: grid; gap: 3px; justify-items: start; min-width: 44px; }
+.ramp li span:first-child { width: 40px; height: 9px; display: block; }
+.ramp .ramp-unit { min-width: 0; padding-left: 4px; align-self: end; color: var(--muted); }
+.panel-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
 .notes { display: grid; gap: 26px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
 .prose { display: grid; gap: 10px; }
 .prose p, .prose ul { margin: 0; max-width: 70ch; color: var(--ink-2); font-size: 13px; }
@@ -217,6 +248,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
         <div class="kv-row"><dt>Readings at</dt><dd id="asof">—</dd></div>
         <div class="kv-row"><dt>Colona gauge</dt><dd><span id="colona-now">—</span> cfs</dd></div>
         <div class="kv-row"><dt>Ridgway release</dt><dd><span id="ridgway-now">—</span> cfs</dd></div>
+        <div class="kv-row"><dt>Outlook</dt><dd><a href="#t-outlook" id="outlook-now">—</a></dd></div>
       </dl>
       <p class="hint">Colona sits above the South Canal and every diversion, so it can read far above or below the town run.</p>
       <p class="notice" id="notice" hidden></p>
@@ -290,10 +322,63 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     </section>
   </div>
 
+  <section class="hist" aria-labelledby="t-outlook">
+    <div class="hist-head">
+      <h2 class="sec-title" id="t-outlook">&gt; OUTLOOK</h2>
+      <p class="hint" id="fc-issued">Storm routing from Cow Creek, the river forecast from NOAA's Colorado Basin River Forecast Center (CBRFC), and radar rain.</p>
+    </div>
+    <div class="outlook">
+      <section class="panel a-park" aria-labelledby="t-park">
+        <h3 class="panel-title" id="t-park">Town run · next 3 days</h3>
+        <p class="headline" id="outlook-head" aria-live="polite">Checking for storm rises…</p>
+        <ul class="facts" id="outlook-facts"></ul>
+        <ul class="legend">
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--river)" stroke-width="2.5"/></svg>Estimated from gauges</li>
+          <li><svg width="22" height="10" aria-hidden="true"><rect x="1" y="0" width="20" height="10" fill="var(--river)" opacity=".22"/></svg>Likely range</li>
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--phos)" stroke-width="2" stroke-dasharray="3 4"/></svg>Cow Creek routing, next hours</li>
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--river)" stroke-width="2" stroke-dasharray="8 5"/></svg>CBRFC river forecast</li>
+        </ul>
+        <div class="chart" id="chart-outlook" tabindex="0" data-label="Town-run flow at the park from a day ago to three days ahead, in cubic feet per second: estimated from gauges, routed from Cow Creek for the next few hours, and from the CBRFC river forecast. Arrow keys step through values."></div>
+        <p class="hint">Times are when water reaches the park, about 2 hours after it passes the Road Bridge gauge. Canal diversions are held at their latest readings. Neither line is an official forecast for the park.</p>
+      </section>
+
+      <section class="panel a-cowc" aria-labelledby="t-cowc">
+        <h3 class="panel-title" id="t-cowc">Cow Creek · gauge &amp; forecast</h3>
+        <ul class="legend">
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--ink-2)" stroke-width="2.5"/></svg>Cow Creek gauge (COWCRKCO)</li>
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--ink-2)" stroke-width="2" stroke-dasharray="8 5"/></svg>CBRFC forecast</li>
+        </ul>
+        <div class="chart" id="chart-cow" tabindex="0" data-label="Cow Creek flow at its gauge over the past day and CBRFC's forecast for the next three days, in cubic feet per second. Arrow keys step through values."></div>
+        <p class="hint">Cow Creek drains 107 square miles of the San Juans and joins the river 2.4 km below Ridgway Dam, the largest stream the reservoir doesn't control. Water passing this gauge reaches the park about 5 hours later. Where the forecast line runs through the past, it shows how well it is tracking.</p>
+      </section>
+
+      <section class="panel a-radar" aria-labelledby="t-radar">
+        <h3 class="panel-title" id="t-radar">Radar rain · uncontrolled creeks</h3>
+        <div class="panel-head">
+          <p class="hint" id="radar-asof">Radar loading…</p>
+          <div class="seg" id="rain-seg" role="group" aria-label="Radar rain period">
+            <button type="button" data-win="01H" aria-pressed="false">1 h</button>
+            <button type="button" data-win="06H" aria-pressed="true">6 h</button>
+            <button type="button" data-win="24H" aria-pressed="false">24 h</button>
+          </div>
+        </div>
+        <div class="basin-map" id="basin-map" role="img" aria-label="Map of the Cow Creek, Horsefly Creek and Dry Cedar Creek drainages, with radar rainfall shaded by square. The table below lists the same rainfall."></div>
+        <ul class="ramp" id="rain-ramp" aria-label="Rain scale, inches"></ul>
+        <div class="table-wrap">
+          <table class="checks">
+            <thead><tr><th scope="col">Drainage</th><th scope="col" class="n">1 h</th><th scope="col" class="n">6 h</th><th scope="col" class="n">24 h</th></tr></thead>
+            <tbody id="rain-body"></tbody>
+          </table>
+        </div>
+        <p class="hint" id="radar-note">Radar-only rainfall from NOAA's MRMS, averaged over each drainage, in inches. In 2021–2026, about half of 6-hour spells with <span class="fill-watch">0.16</span> inch or more on the Cow Creek basin were followed by a Cow Creek rise within 12 hours; the creek peaked a median 3 hours after the spell ended, and the water takes another 5 to reach the park. Radar missed the rain entirely before 9 of 53 rises. Horsefly and Dry Cedar creeks have no gauges, so the page can't say how much they add, only that rain is falling on them. 6-hour totals past the mark show in green.</p>
+      </section>
+    </div>
+  </section>
+
   <section class="hist" aria-labelledby="t-hist">
     <div class="hist-head">
       <h2 class="sec-title" id="t-hist">&gt; HISTORY</h2>
-      <div class="seg" role="group" aria-label="Time range for both charts">
+      <div class="seg" id="range-seg" role="group" aria-label="Time range for both charts">
         <button type="button" data-range="7d" aria-pressed="true">7 days</button>
         <button type="button" data-range="90d" aria-pressed="false">90 days</button>
         <button type="button" data-range="all" aria-pressed="false">Since 2025</button>
@@ -315,8 +400,9 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
           <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--gunnison)" stroke-width="2.5"/></svg>South Canal at the tunnel</li>
           <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--river)" stroke-width="2.5"/></svg>Ridgway Reservoir release</li>
           <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--canal)" stroke-width="2.5"/></svg>Canals above town, combined</li>
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--ink-2)" stroke-width="2" stroke-dasharray="5 4"/></svg>Cow Creek</li>
         </ul>
-        <div class="chart" id="chart-drivers" tabindex="0" data-label="South Canal flow, Ridgway Reservoir release and combined canal diversions over time, in cubic feet per second. Arrow keys step through values."></div>
+        <div class="chart" id="chart-drivers" tabindex="0" data-label="South Canal flow, Ridgway Reservoir release, combined canal diversions and Cow Creek over time, in cubic feet per second. Arrow keys step through values."></div>
       </section>
     </div>
   </section>
@@ -328,17 +414,28 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       <ul>
         <li><strong>Dry Cedar Creek</strong> enters between Chipeta Lake and the park and isn't gauged. The page adds its typical flow from 34 USGS measurements (1991–2001): about 16 cfs while the tunnel runs, easing to about 2 cfs over the week after it shuts off. Piped laterals may have lowered it since.</li>
         <li><strong>The Stark-Volkman Ditch</strong> has reported live only since September 2026. When it's silent, the page uses its typical diversion for the month from DWR's official records (2020–2025).</li>
-        <li>Storm drains and irrigation return flows in town still aren't counted, nor are the few hours water takes to travel from the Road Bridge gauge to the park.</li>
+        <li>Storm drains and irrigation return flows in town still aren't counted. Water takes about 2 hours to get from the Road Bridge gauge to the park, so the readout runs about 2 hours ahead of the park; the Outlook chart is drawn in park time.</li>
         <li>The City's park page shows an estimate built the same way, minus Dry Cedar Creek and the Stark-Volkman Ditch, so the two can differ by about 40 cfs in summer.</li>
         <li>No independent flow measurements at the park exist to check against. Volunteer readings in public databases track the Colona gauge, not the park.</li>
         <li>The canal stations go quiet in winter. The console then shows the last complete reading and says so.</li>
       </ul>
     </section>
+    <section class="panel prose" aria-labelledby="t-how">
+      <h2 class="panel-title" id="t-how">How the outlook works</h2>
+      <p>Summer storms raise the town run mostly through creeks Ridgway Reservoir doesn't control. Cow Creek is the largest; Horsefly and Dry Cedar creeks join below every gauge.</p>
+      <ul>
+        <li><strong>Cow Creek routing.</strong> Colona follows Cow Creek and the dam release about 2 hours later, and Road Bridge follows Colona about an hour after that, so the page can route the latest readings 3 to 5 hours ahead at the park. Fit hour by hour on <span class="fill-storms">72</span> summer storms (2016–2026) and tested a year at a time, it cut the average miss 3 hours ahead, while Cow Creek was rising, from 46 cfs (assuming no change) to 36. Timing is its strength; size is loose. The real rise typically came in at <span class="fill-rise-mid">0.8</span> times the routed one, and 2 times in 3 between <span class="fill-rise-lo">0.1</span> and <span class="fill-rise-hi">2</span> times, so the line is drawn at <span class="fill-rise-mid">0.8</span> with that range.</li>
+        <li><strong>CBRFC forecast.</strong> NOAA's river forecast for the Road Bridge gauge (UNBC2) includes forecast rain. The page nudges it to match the latest reading, easing that correction out over about a day, then runs it through the same sum as the estimate.</li>
+        <li><strong>Radar.</strong> Tested on 53 Cow Creek rises (2021–2026), radar showed rain on the basin before 44, and the creek peaked a median 7 hours after the middle of the rain. But rain totals explained only part of how big each rise got, so the page shows radar as a warning, not as flow.</li>
+        <li><strong>Reservoir operators</strong> cut the release in 21 of 72 past storms, which shrinks a rise. The routing picks up a cut once it shows at the dam gauge; the CBRFC forecast may not.</li>
+      </ul>
+    </section>
     <section class="panel prose" aria-labelledby="t-src">
       <h2 class="panel-title" id="t-src">Sources</h2>
-      <p>Provisional real-time readings from the <strong>Colorado Division of Water Resources</strong> and the <strong>U.S. Geological Survey</strong>. Typical values from USGS field measurements and DWR diversion records. Webcam from the <strong>City of Montrose</strong>. River course from USGS NHDPlus.</p>
+      <p>Provisional real-time readings from the <strong>Colorado Division of Water Resources</strong> and the <strong>U.S. Geological Survey</strong>. River forecasts from NOAA's <strong>Colorado Basin River Forecast Center</strong> and radar rainfall from NOAA's <strong>MRMS</strong>, both through the National Weather Service. Typical values from USGS field measurements and DWR diversion records. Webcam from the <strong>City of Montrose</strong>. River, creek and drainage outlines from USGS NHDPlus and NLDI.</p>
       <div class="links">
         <a href="https://waterdata.usgs.gov/monitoring-location/USGS-09147025/" target="_blank" rel="noopener">USGS 09147025 · Below Ridgway Res.</a>
+        <a href="https://dwr.state.co.us/Tools/Stations/COWCRKCO" target="_blank" rel="noopener">COWCRKCO · Cow Creek</a>
         <a href="https://waterdata.usgs.gov/monitoring-location/USGS-09147500/" target="_blank" rel="noopener">USGS 09147500 · Colona</a>
         <a href="https://dwr.state.co.us/Tools/Stations/UNCUPSCO" target="_blank" rel="noopener">UNCUPSCO · Above South Canal</a>
         <a href="https://dwr.state.co.us/Tools/Stations/SOUCANCO" target="_blank" rel="noopener">SOUCANCO · South Canal</a>
@@ -348,12 +445,15 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
         <a href="https://dwr.state.co.us/Tools/Stations/LOUTCNCO" target="_blank" rel="noopener">LOUTCNCO · Loutsenhizer</a>
         <a href="https://waterdata.usgs.gov/monitoring-location/USGS-382711107520101/" target="_blank" rel="noopener">USGS 382711107520101 · Dry Cedar Cr.</a>
         <a href="https://dwr.state.co.us/Tools/Structures/4100566" target="_blank" rel="noopener">WDID 4100566 · Stark-Volkman records</a>
+        <a href="https://water.noaa.gov/gauges/UNBC2" target="_blank" rel="noopener">CBRFC UNBC2 · Road Bridge forecast</a>
+        <a href="https://water.noaa.gov/gauges/COWC2" target="_blank" rel="noopener">CBRFC COWC2 · Cow Creek forecast</a>
+        <a href="https://www.nssl.noaa.gov/projects/mrms/" target="_blank" rel="noopener">NOAA MRMS · radar rainfall</a>
         <a href="https://www.cityofmontrose.org/613/Water-Sports-Park" target="_blank" rel="noopener">City of Montrose · park estimate &amp; webcam</a>
       </div>
     </section>
   </div>
 
-  <footer>NOT AN OFFICIAL GAUGE · REFRESHES EVERY 15 MIN WHILE OPEN · TIMES ARE MONTROSE LOCAL · LOOK AT THE RIVER BEFORE YOU PUT IN</footer>
+  <footer>NOT AN OFFICIAL GAUGE OR FORECAST · REFRESHES EVERY 15 MIN WHILE OPEN · TIMES ARE MONTROSE LOCAL · LOOK AT THE RIVER BEFORE YOU PUT IN</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
@@ -365,8 +465,30 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   const TZ = 'America/Denver';
   const DWR = 'https://dwr.state.co.us/Rest/GET/api/v2/telemetrystations/';
   const OGC = 'https://api.waterdata.usgs.gov/ogcapi/v0/collections/';
-  const DWR_IDS = { road: 'UNCBRGCO', md: 'MANDCNCO', sv: '4100566A', lout: 'LOUTCNCO', up: 'UNCUPSCO', south: 'SOUCANCO' };
+  const DWR_IDS = { road: 'UNCBRGCO', md: 'MANDCNCO', sv: '4100566A', lout: 'LOUTCNCO', up: 'UNCUPSCO', south: 'SOUCANCO', cow: 'COWCRKCO' };
   const USGS_IDS = { colona: 'USGS-09147500', ridgway: 'USGS-09147025' };
+  const NWPS = 'https://api.water.noaa.gov/nwps/v1/gauges/';
+  const NWPS_IDS = { road: 'UNBC2', cow: 'COWC2' }; // CBRFC forecast points: Road Bridge, Cow Creek
+  const MRMS = 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer/';
+  // Storm routing, fit hour by hour on 72 summer storms (2016–2026), tested leaving out one year at a time:
+  // Colona follows Cow Creek and the dam release 2 h later; Road Bridge follows Colona 1 h after that; the park ~2 h later.
+  // The real rise came in at a median 0.8 times the routed rise, and 2 times in 3 between 0.1 and 2 times.
+  const ROUTE = { cowToColona: 0.91, releaseToColona: 0.87, lagCowColona: 2, lagColonaRoad: 1, roadToPark: 2, rise: { lo: 0.1, mid: 0.8, hi: 2 }, storms: 72 };
+  const OUTLOOK_HOURS = 72;       // how far ahead the outlook chart runs
+  const FC_BLEND_HOURS = 12;      // the CBRFC forecast is shifted to match the latest reading; the shift fades with this time constant
+  const FC_MAX_AGE_HOURS = 36;    // older CBRFC forecasts are ignored
+  const RISE_NOTICE_CFS = 20;     // routed or forecast rises at the park smaller than this read as steady
+  // Radar rain over each drainage (MRMS radar-only, mm); colors step up a single blue ramp
+  const RAIN_WINDOWS = ['01H', '06H', '24H'];
+  const RAIN_RAMP = [[0.01, '#1a4a6e'], [0.05, '#21679a'], [0.1, '#2f88c4'], [0.25, '#55a9e2'], [0.5, '#8fcbf2'], [1, '#cdeaff']]; // inches
+  // 6-hour basin rain worth flagging: in 2021–2026, 52% of 6-hour spells with 4 mm or more on the Cow Creek basin
+  // were followed by a Cow Creek rise within 12 hours (about 5 spells a season)
+  const RAIN_WATCH_MM = 4;
+  const BASIN_INFO = {
+    cow: { name: 'Cow Creek', sqmi: 107, joins: 'joins 2.4 km below the dam', gauged: true },
+    horsefly: { name: 'Horsefly Creek', sqmi: 45, joins: 'joins 2 km above Chipeta Lake', gauged: false },
+    drycedar: { name: 'Dry Cedar Creek', sqmi: 24, joins: 'joins 1.4 km above the park', gauged: false },
+  };
   const ERR_TUNNEL_ON = 0.10;  // per-gauge error while the tunnel runs (neighboring gauges compared, 2016–2026)
   const ERR_TUNNEL_OFF = 0.15; // per-gauge error with the tunnel off (low flows, ice)
   const TUNNEL_ON_CFS = 100;   // South Canal flow that counts as the tunnel running
@@ -386,30 +508,45 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   };
   const CAM_URL = 'https://player.castr.com/live_6334ab40731c11f0a39cdd6bdd6ccb5e';
 
-  // River course, upstream (south) to downstream (north), simplified from USGS NHDPlus flowlines.
-  const RIVER = [[-107.76286,38.28328],[-107.76385,38.28639],[-107.76303,38.28763],[-107.76309,38.28813],[-107.76338,38.28843],[-107.76471,38.28872],[-107.76602,38.29092],[-107.76735,38.29154],[-107.76778,38.29202],[-107.76813,38.29273],[-107.76784,38.29525],[-107.77004,38.29795],[-107.7701,38.29948],[-107.76937,38.3006],[-107.76896,38.30243],[-107.76896,38.30481],[-107.76834,38.30721],[-107.77043,38.30838],[-107.7702,38.30929],[-107.76935,38.31019],[-107.76938,38.31069],[-107.77127,38.3136],[-107.7717,38.31401],[-107.77304,38.31424],[-107.77335,38.31557],[-107.7742,38.31591],[-107.77405,38.31756],[-107.77445,38.3184],[-107.77425,38.32012],[-107.77375,38.32106],[-107.77395,38.32211],[-107.7748,38.32312],[-107.7759,38.32339],[-107.77645,38.32385],[-107.777,38.32476],[-107.77726,38.32591],[-107.7779,38.32675],[-107.77784,38.32861],[-107.77871,38.32961],[-107.77975,38.33193],[-107.78042,38.33241],[-107.78245,38.33309],[-107.78268,38.33358],[-107.78306,38.33575],[-107.78233,38.33678],[-107.78233,38.33778],[-107.78308,38.3395],[-107.78415,38.34058],[-107.78404,38.3419],[-107.7854,38.34334],[-107.78499,38.3452],[-107.78595,38.34685],[-107.78534,38.34867],[-107.78615,38.34989],[-107.78664,38.35016],[-107.78687,38.35163],[-107.79073,38.35561],[-107.79108,38.35723],[-107.79195,38.3587],[-107.79195,38.35973],[-107.79308,38.3611],[-107.79366,38.36273],[-107.79549,38.36376],[-107.79589,38.36449],[-107.79607,38.36614],[-107.79708,38.36728],[-107.79766,38.36769],[-107.79961,38.36824],[-107.79999,38.36893],[-107.79996,38.36996],[-107.80054,38.37042],[-107.80152,38.3706],[-107.80263,38.37126],[-107.80513,38.37165],[-107.80585,38.37227],[-107.80754,38.37209],[-107.8094,38.37335],[-107.80954,38.37429],[-107.80916,38.37637],[-107.81064,38.37838],[-107.81267,38.37918],[-107.81311,38.37966],[-107.81317,38.38024],[-107.81256,38.38168],[-107.81555,38.38447],[-107.81555,38.38557],[-107.81613,38.38593],[-107.81776,38.38607],[-107.82322,38.3911],[-107.82359,38.39175],[-107.82356,38.3938],[-107.82423,38.39586],[-107.8258,38.39861],[-107.82533,38.40158],[-107.82588,38.40414],[-107.82635,38.40465],[-107.82655,38.40563],[-107.82946,38.40739],[-107.82937,38.4092],[-107.83091,38.41067],[-107.83076,38.41517],[-107.83291,38.41714],[-107.83521,38.41815],[-107.83666,38.41828],[-107.83765,38.41959],[-107.83846,38.41963],[-107.83913,38.41929],[-107.84088,38.41666],[-107.84137,38.41687],[-107.84245,38.4184],[-107.84355,38.41831],[-107.84466,38.41865],[-107.84541,38.42014],[-107.84608,38.42071],[-107.84919,38.42062],[-107.85111,38.42158],[-107.85227,38.42256],[-107.85443,38.42378],[-107.85428,38.42439],[-107.85184,38.42574],[-107.85184,38.42618],[-107.8523,38.42657],[-107.85379,38.42716],[-107.85387,38.4281],[-107.85422,38.42847],[-107.85538,38.42863],[-107.85666,38.42998],[-107.858,38.42977],[-107.86015,38.42995],[-107.85983,38.431],[-107.86082,38.43208],[-107.86137,38.43402],[-107.86207,38.43457],[-107.86196,38.4351],[-107.86097,38.43597],[-107.86146,38.4372],[-107.86236,38.4372],[-107.86306,38.43672],[-107.86498,38.4362],[-107.86638,38.43627],[-107.86736,38.43679],[-107.86879,38.43848],[-107.86876,38.4394],[-107.86754,38.44105],[-107.8676,38.44137],[-107.86911,38.44194],[-107.87001,38.44306],[-107.8717,38.44381],[-107.87187,38.44519],[-107.87307,38.44638],[-107.87216,38.44791],[-107.87231,38.44853],[-107.8733,38.44917],[-107.87388,38.45216],[-107.87339,38.45283],[-107.87228,38.45344],[-107.87225,38.4539],[-107.87362,38.45516],[-107.87362,38.45546],[-107.87237,38.45635],[-107.87237,38.45706],[-107.87423,38.45873],[-107.87609,38.45886],[-107.87665,38.45923],[-107.8772,38.46101],[-107.87764,38.46156],[-107.87964,38.46278],[-107.87996,38.46346],[-107.88031,38.46641],[-107.87953,38.46724],[-107.87956,38.4681],[-107.88014,38.46916],[-107.87921,38.47076],[-107.88002,38.4714],[-107.87967,38.47222],[-107.88008,38.47254],[-107.88241,38.47291],[-107.88311,38.47369],[-107.88404,38.47352],[-107.88497,38.47373],[-107.88608,38.47565],[-107.88695,38.47828],[-107.88852,38.47883],[-107.88814,38.47993],[-107.88844,38.48089],[-107.88992,38.48116],[-107.89068,38.48183],[-107.89193,38.48105],[-107.89367,38.48221],[-107.89399,38.48283],[-107.89408,38.4845],[-107.8965,38.48484],[-107.89688,38.48516],[-107.89635,38.4861],[-107.89635,38.48686],[-107.89694,38.48718],[-107.89816,38.48709],[-107.89964,38.48807],[-107.89956,38.48935],[-107.90043,38.49056],[-107.89991,38.49221],[-107.89991,38.49335],[-107.9002,38.49365],[-107.90055,38.49381],[-107.90151,38.49328],[-107.90273,38.49376],[-107.90392,38.49374],[-107.90509,38.49509],[-107.90663,38.49518],[-107.90643,38.49694],[-107.90698,38.49749],[-107.90725,38.49884],[-107.90923,38.4993],[-107.9103,38.49911],[-107.91141,38.49939],[-107.91112,38.50229],[-107.91182,38.50428],[-107.91194,38.50567],[-107.91465,38.50768],[-107.91558,38.50979],[-107.91779,38.51068],[-107.91887,38.5104],[-107.92064,38.51056],[-107.92248,38.51017],[-107.92309,38.51111],[-107.92463,38.51127],[-107.92886,38.51603],[-107.93124,38.51699],[-107.9327,38.51703],[-107.93308,38.51767],[-107.9343,38.51712],[-107.935,38.51717],[-107.93602,38.51808],[-107.93692,38.51751],[-107.93736,38.51753],[-107.93815,38.51863],[-107.93937,38.51938],[-107.93905,38.52124],[-107.93984,38.52167],[-107.94068,38.52096],[-107.94109,38.52101],[-107.94222,38.52199],[-107.9438,38.52224],[-107.94557,38.52135],[-107.94607,38.52137],[-107.94951,38.52393],[-107.95125,38.52381],[-107.95297,38.52562],[-107.9546,38.52589],[-107.95635,38.52706],[-107.95644,38.52797],[-107.95729,38.52918],[-107.95895,38.52971],[-107.96087,38.53142],[-107.96233,38.53197],[-107.96311,38.53327],[-107.96323,38.53581]];
+  // River course from Ridgway Dam to below Taviwach Park, upstream (south) to downstream (north), simplified from USGS NHDPlus (NLDI)
+  const RIVER = [[-107.75774,38.236],[-107.76046,38.23788],[-107.76069,38.23863],[-107.76003,38.23927],[-107.76008,38.23962],[-107.76231,38.24259],[-107.76347,38.24289],[-107.76385,38.24349],[-107.76396,38.24502],[-107.7644,38.24596],[-107.76384,38.24701],[-107.76431,38.24733],[-107.76524,38.24735],[-107.7657,38.24774],[-107.76521,38.24927],[-107.76587,38.25142],[-107.76532,38.25233],[-107.76532,38.25414],[-107.76497,38.25494],[-107.76366,38.25594],[-107.76331,38.2569],[-107.76261,38.25761],[-107.76044,38.25782],[-107.75986,38.25827],[-107.75985,38.26061],[-107.75854,38.26253],[-107.75872,38.2634],[-107.75993,38.26385],[-107.76077,38.26484],[-107.76106,38.26603],[-107.76051,38.26752],[-107.7608,38.26806],[-107.76245,38.26894],[-107.76201,38.27049],[-107.76381,38.2726],[-107.76505,38.2731],[-107.76578,38.27466],[-107.76566,38.27598],[-107.76264,38.27886],[-107.7633,38.28076],[-107.76275,38.28207],[-107.76295,38.28419],[-107.76385,38.28639],[-107.763,38.2879],[-107.76338,38.28843],[-107.76471,38.28872],[-107.76602,38.29092],[-107.76735,38.29154],[-107.76778,38.29202],[-107.76813,38.29273],[-107.76784,38.29525],[-107.77004,38.29795],[-107.7701,38.29948],[-107.76937,38.3006],[-107.76896,38.30243],[-107.76896,38.30481],[-107.7684,38.30744],[-107.76959,38.30774],[-107.77043,38.30838],[-107.7702,38.30929],[-107.76935,38.31019],[-107.77019,38.3122],[-107.7717,38.31401],[-107.77304,38.31424],[-107.77335,38.31557],[-107.7742,38.31591],[-107.77405,38.31756],[-107.77445,38.3184],[-107.77425,38.32012],[-107.77375,38.32106],[-107.77395,38.32211],[-107.7748,38.32312],[-107.7759,38.32339],[-107.77645,38.32385],[-107.777,38.32476],[-107.77726,38.32591],[-107.7779,38.32675],[-107.77784,38.32861],[-107.77871,38.32961],[-107.77975,38.33193],[-107.78042,38.33241],[-107.78245,38.33309],[-107.78268,38.33358],[-107.78306,38.33575],[-107.78233,38.33678],[-107.78233,38.33778],[-107.78308,38.3395],[-107.78415,38.34058],[-107.78404,38.3419],[-107.7854,38.34334],[-107.78499,38.3452],[-107.78595,38.34685],[-107.78534,38.34867],[-107.78615,38.34989],[-107.78664,38.35016],[-107.78687,38.35163],[-107.79073,38.35561],[-107.79108,38.35723],[-107.79195,38.3587],[-107.79195,38.35973],[-107.79308,38.3611],[-107.79366,38.36273],[-107.79549,38.36376],[-107.79589,38.36449],[-107.79607,38.36614],[-107.79708,38.36728],[-107.79984,38.36847],[-107.79996,38.36996],[-107.80054,38.37042],[-107.80152,38.3706],[-107.80263,38.37126],[-107.80513,38.37165],[-107.80585,38.37227],[-107.80754,38.37209],[-107.8094,38.37335],[-107.80954,38.37429],[-107.80916,38.37637],[-107.81064,38.37838],[-107.81267,38.37918],[-107.81311,38.37966],[-107.81317,38.38024],[-107.81256,38.38168],[-107.81555,38.38447],[-107.81555,38.38557],[-107.81613,38.38593],[-107.81776,38.38607],[-107.82322,38.3911],[-107.82359,38.39175],[-107.82356,38.3938],[-107.82423,38.39586],[-107.8258,38.39861],[-107.82533,38.40158],[-107.82574,38.40373],[-107.82635,38.40465],[-107.82655,38.40563],[-107.82946,38.40739],[-107.82937,38.4092],[-107.83091,38.41067],[-107.83064,38.41469],[-107.83123,38.41572],[-107.83291,38.41714],[-107.83521,38.41815],[-107.83666,38.41828],[-107.83765,38.41959],[-107.83846,38.41963],[-107.83913,38.41929],[-107.84088,38.41666],[-107.84137,38.41687],[-107.84245,38.4184],[-107.84355,38.41831],[-107.84466,38.41865],[-107.84541,38.42014],[-107.84608,38.42071],[-107.84919,38.42062],[-107.85111,38.42158],[-107.85227,38.42256],[-107.85443,38.42378],[-107.85428,38.42439],[-107.85184,38.42574],[-107.85184,38.42618],[-107.8523,38.42657],[-107.85379,38.42716],[-107.85387,38.4281],[-107.85422,38.42847],[-107.85538,38.42863],[-107.85666,38.42998],[-107.858,38.42977],[-107.86015,38.42995],[-107.85983,38.431],[-107.86082,38.43208],[-107.86137,38.43402],[-107.86207,38.43457],[-107.86196,38.4351],[-107.86097,38.43597],[-107.86146,38.4372],[-107.86236,38.4372],[-107.86306,38.43672],[-107.86498,38.4362],[-107.86638,38.43627],[-107.86736,38.43679],[-107.86879,38.43848],[-107.86876,38.4394],[-107.86754,38.44105],[-107.8676,38.44137],[-107.86911,38.44194],[-107.87001,38.44306],[-107.8717,38.44381],[-107.87187,38.44519],[-107.87307,38.44638],[-107.87216,38.44791],[-107.87231,38.44853],[-107.8733,38.44917],[-107.87388,38.45216],[-107.87339,38.45283],[-107.87228,38.45344],[-107.87225,38.4539],[-107.87362,38.45516],[-107.87362,38.45546],[-107.87237,38.45635],[-107.87237,38.45706],[-107.87423,38.45873],[-107.87609,38.45886],[-107.87665,38.45923],[-107.8772,38.46101],[-107.87764,38.46156],[-107.87964,38.46278],[-107.87996,38.46346],[-107.88031,38.46641],[-107.87953,38.46724],[-107.87956,38.4681],[-107.88014,38.46916],[-107.87921,38.47076],[-107.88002,38.4714],[-107.87967,38.47222],[-107.88008,38.47254],[-107.88241,38.47291],[-107.88311,38.47369],[-107.88404,38.47352],[-107.88497,38.47373],[-107.88608,38.47565],[-107.88695,38.47828],[-107.88852,38.47883],[-107.88814,38.47993],[-107.88844,38.48089],[-107.88992,38.48116],[-107.89068,38.48183],[-107.89193,38.48105],[-107.89367,38.48221],[-107.89399,38.48283],[-107.89408,38.4845],[-107.8965,38.48484],[-107.89688,38.48516],[-107.89635,38.4861],[-107.89635,38.48686],[-107.89694,38.48718],[-107.89816,38.48709],[-107.89964,38.48807],[-107.89956,38.48935],[-107.90043,38.49056],[-107.89991,38.49221],[-107.89991,38.49335],[-107.9002,38.49365],[-107.90055,38.49381],[-107.90151,38.49328],[-107.90273,38.49376],[-107.90392,38.49374],[-107.90509,38.49509],[-107.90663,38.49518],[-107.90643,38.49694],[-107.90698,38.49749],[-107.90725,38.49884],[-107.90923,38.4993],[-107.9103,38.49911],[-107.91141,38.49939],[-107.91112,38.50229],[-107.91182,38.50428],[-107.91194,38.50567],[-107.91465,38.50768],[-107.91558,38.50979],[-107.91779,38.51068],[-107.91887,38.5104],[-107.92064,38.51056],[-107.92248,38.51017],[-107.92309,38.51111],[-107.92463,38.51127],[-107.92886,38.51603],[-107.93124,38.51699],[-107.9327,38.51703],[-107.93308,38.51767],[-107.9343,38.51712],[-107.935,38.51717],[-107.93602,38.51808],[-107.93692,38.51751],[-107.93736,38.51753],[-107.93815,38.51863],[-107.93937,38.51938],[-107.93905,38.52124],[-107.93984,38.52167],[-107.94068,38.52096],[-107.94109,38.52101],[-107.94222,38.52199],[-107.9438,38.52224],[-107.94557,38.52135],[-107.94607,38.52137],[-107.94951,38.52393],[-107.95125,38.52381],[-107.95297,38.52562],[-107.9546,38.52589],[-107.95635,38.52706],[-107.95644,38.52797],[-107.95729,38.52918],[-107.95895,38.52971],[-107.96087,38.53142],[-107.96233,38.53197],[-107.96311,38.53327],[-107.96323,38.53581]];
+  // Drainages of the three creeks the dam doesn't control (NLDI), their NHD channels, and the MRMS radar
+  // cells inside each: [grid row, first column, last column] on the 0.01° grid (row 0 = 54.995°N, column 0 = 129.995°W)
+  const BASIN_GEO = {"basins":{"cow":[[-107.5871,37.999],[-107.5928,38.0035],[-107.6021,38.0057],[-107.6042,38.0106],[-107.6087,38.0118],[-107.613,38.0164],[-107.6205,38.0188],[-107.6254,38.0249],[-107.6206,38.0317],[-107.6219,38.0346],[-107.6169,38.0382],[-107.6182,38.0408],[-107.6129,38.0442],[-107.6089,38.0532],[-107.6138,38.0593],[-107.6121,38.063],[-107.6146,38.0672],[-107.6205,38.07],[-107.6219,38.0751],[-107.6277,38.0788],[-107.6264,38.0831],[-107.6301,38.0894],[-107.6348,38.0943],[-107.6487,38.1017],[-107.6535,38.1067],[-107.6535,38.1092],[-107.6606,38.1139],[-107.6625,38.1283],[-107.653,38.1518],[-107.6541,38.1593],[-107.6607,38.1637],[-107.6595,38.1685],[-107.6622,38.1735],[-107.6674,38.1767],[-107.6702,38.1819],[-107.678,38.1833],[-107.6776,38.1888],[-107.6849,38.1902],[-107.6859,38.1935],[-107.6835,38.2002],[-107.6943,38.2074],[-107.7115,38.2129],[-107.7342,38.2287],[-107.7375,38.2276],[-107.7394,38.2323],[-107.7592,38.2435],[-107.7651,38.2536],[-107.7544,38.248],[-107.744,38.2471],[-107.7416,38.2527],[-107.7304,38.2585],[-107.7151,38.2572],[-107.701,38.2616],[-107.6987,38.2688],[-107.6943,38.2699],[-107.6914,38.2779],[-107.6829,38.283],[-107.6695,38.2859],[-107.6616,38.2913],[-107.6557,38.2928],[-107.6462,38.3026],[-107.6376,38.3078],[-107.6339,38.3074],[-107.6353,38.3019],[-107.6296,38.294],[-107.6295,38.2883],[-107.6249,38.2807],[-107.6202,38.2754],[-107.6165,38.2753],[-107.6176,38.2731],[-107.6146,38.2696],[-107.6126,38.2614],[-107.599,38.2533],[-107.5919,38.254],[-107.5883,38.2495],[-107.5865,38.2384],[-107.5801,38.2306],[-107.5789,38.2224],[-107.5805,38.213],[-107.5753,38.2098],[-107.5756,38.1995],[-107.5724,38.1872],[-107.5667,38.1762],[-107.5681,38.1718],[-107.5644,38.1668],[-107.5624,38.1583],[-107.5639,38.1511],[-107.5696,38.1463],[-107.5742,38.1359],[-107.5703,38.135],[-107.5631,38.1237],[-107.5641,38.1188],[-107.5609,38.1102],[-107.5624,38.1014],[-107.5652,38.0987],[-107.5607,38.0926],[-107.5596,38.0871],[-107.5535,38.0791],[-107.5499,38.0781],[-107.5446,38.0805],[-107.5332,38.0796],[-107.5249,38.0745],[-107.5244,38.0726],[-107.5155,38.0684],[-107.5109,38.0607],[-107.5156,38.0578],[-107.5225,38.0569],[-107.5209,38.0522],[-107.5227,38.0482],[-107.5207,38.0458],[-107.5222,38.0421],[-107.5251,38.039],[-107.531,38.0389],[-107.5376,38.0322],[-107.537,38.0287],[-107.5396,38.0273],[-107.5366,38.0227],[-107.5395,38.0167],[-107.5384,38.0085],[-107.543,38.0063],[-107.5471,37.9995],[-107.5565,37.9992],[-107.5661,38.0052],[-107.574,38.0065],[-107.5812,38.0003]],"horsefly":[[-107.8695,38.2092],[-107.8807,38.2027],[-107.8895,38.2023],[-107.8978,38.1966],[-107.9078,38.1932],[-107.9315,38.1935],[-107.9333,38.2003],[-107.9433,38.2123],[-107.9563,38.2191],[-107.9679,38.2225],[-107.9629,38.2279],[-107.965,38.2319],[-107.9526,38.236],[-107.9409,38.2435],[-107.9337,38.2458],[-107.9159,38.2581],[-107.8995,38.2635],[-107.9083,38.2848],[-107.9066,38.2989],[-107.9026,38.3072],[-107.899,38.3075],[-107.8908,38.3127],[-107.8881,38.3167],[-107.8742,38.3231],[-107.874,38.3264],[-107.87,38.3303],[-107.858,38.3396],[-107.8524,38.3405],[-107.8373,38.3625],[-107.8371,38.3646],[-107.8431,38.371],[-107.8393,38.3716],[-107.8379,38.3786],[-107.8471,38.3938],[-107.8535,38.3983],[-107.8541,38.4078],[-107.8609,38.4239],[-107.8593,38.4264],[-107.8547,38.4275],[-107.853,38.4256],[-107.8566,38.424],[-107.849,38.4104],[-107.8371,38.3957],[-107.8248,38.3883],[-107.824,38.3833],[-107.8136,38.3719],[-107.8214,38.3601],[-107.8199,38.3549],[-107.808,38.3416],[-107.8049,38.3324],[-107.7984,38.325],[-107.8117,38.3166],[-107.8534,38.2748],[-107.8609,38.27],[-107.8581,38.2671],[-107.8611,38.2609],[-107.8581,38.2536],[-107.8553,38.2333],[-107.8501,38.2196]],"drycedar":[[-107.6901,38.38],[-107.6923,38.3812],[-107.6974,38.3803],[-107.7022,38.39],[-107.7088,38.3937],[-107.7296,38.384],[-107.7367,38.3861],[-107.7405,38.3901],[-107.7556,38.3866],[-107.7607,38.3879],[-107.7685,38.3848],[-107.7813,38.3906],[-107.787,38.3915],[-107.788,38.3999],[-107.797,38.3998],[-107.804,38.4021],[-107.8089,38.407],[-107.8126,38.4067],[-107.817,38.4092],[-107.8167,38.4115],[-107.8212,38.4133],[-107.821,38.4156],[-107.8315,38.4198],[-107.8326,38.4186],[-107.8354,38.4197],[-107.8355,38.422],[-107.8408,38.4235],[-107.8474,38.4303],[-107.855,38.4342],[-107.8617,38.4407],[-107.8627,38.4469],[-107.8723,38.4563],[-107.8639,38.4543],[-107.8616,38.4514],[-107.8533,38.4511],[-107.8508,38.4495],[-107.8366,38.4329],[-107.8277,38.4298],[-107.8255,38.4251],[-107.8219,38.4238],[-107.8114,38.424],[-107.8064,38.4304],[-107.8023,38.4275],[-107.7869,38.4333],[-107.785,38.4355],[-107.7685,38.4379],[-107.7636,38.4338],[-107.7516,38.4342],[-107.7473,38.4374],[-107.7413,38.4377],[-107.7399,38.4397],[-107.7319,38.4378],[-107.7133,38.444],[-107.6994,38.4396],[-107.6952,38.4399],[-107.6904,38.4339],[-107.689,38.4236],[-107.6823,38.412],[-107.6858,38.3985],[-107.6746,38.3874]]},"creeks":{"cow":[[[-107.5576,38.003],[-107.5551,38.0058],[-107.5501,38.009],[-107.5459,38.017],[-107.5483,38.0207],[-107.5507,38.0337],[-107.5539,38.0388],[-107.5551,38.045],[-107.5608,38.0496],[-107.5681,38.0519],[-107.5782,38.0574],[-107.5845,38.0622],[-107.5996,38.0853],[-107.6046,38.0897],[-107.6079,38.0912],[-107.6133,38.0996],[-107.6157,38.1008],[-107.6213,38.1128],[-107.6234,38.1145],[-107.625,38.1198],[-107.6284,38.1235],[-107.629,38.1283],[-107.6275,38.1304],[-107.6312,38.1356],[-107.6381,38.1387],[-107.6385,38.1405],[-107.645,38.1479],[-107.6444,38.1497],[-107.6465,38.1548],[-107.6468,38.1602],[-107.6483,38.1626],[-107.6484,38.1663],[-107.6503,38.1686],[-107.6503,38.1712],[-107.6523,38.1747],[-107.6579,38.1792],[-107.6591,38.1838],[-107.6635,38.187],[-107.6669,38.1916],[-107.6762,38.1966],[-107.678,38.2014],[-107.6826,38.2073],[-107.6856,38.209],[-107.6857,38.2115],[-107.688,38.2123],[-107.6906,38.2149],[-107.6952,38.2152],[-107.7003,38.2192],[-107.7064,38.2203],[-107.7082,38.2218],[-107.7115,38.2215],[-107.7176,38.224],[-107.719,38.2235],[-107.7201,38.2252],[-107.7253,38.2251],[-107.7253,38.2269],[-107.7287,38.2294],[-107.7292,38.2318],[-107.7333,38.2346],[-107.736,38.235],[-107.7391,38.2409],[-107.7427,38.2424],[-107.7447,38.2422],[-107.7451,38.2435],[-107.7474,38.2445],[-107.7506,38.2441],[-107.7521,38.2456],[-107.7556,38.2453],[-107.7652,38.2538]]],"horsefly":[[[-107.8672,38.2787],[-107.8663,38.2804],[-107.8617,38.2838],[-107.8509,38.2874],[-107.8498,38.2915],[-107.8461,38.2919],[-107.8467,38.2984],[-107.8435,38.2991],[-107.8419,38.3006],[-107.8418,38.3105],[-107.8392,38.3128],[-107.8362,38.3182],[-107.8352,38.321],[-107.8359,38.3225],[-107.834,38.3242],[-107.8299,38.3254],[-107.8289,38.3278],[-107.8215,38.3332],[-107.8219,38.3364],[-107.8204,38.3369],[-107.8199,38.3393],[-107.8213,38.3407],[-107.8203,38.3479],[-107.8228,38.351],[-107.8238,38.354],[-107.8229,38.3552],[-107.8267,38.3602],[-107.8256,38.3654],[-107.8261,38.3692],[-107.8233,38.3739],[-107.824,38.3769],[-107.8323,38.3883],[-107.8367,38.3907],[-107.8425,38.3988],[-107.8458,38.4024],[-107.8492,38.4042],[-107.8493,38.4063],[-107.8539,38.4108],[-107.854,38.4131],[-107.8584,38.4212],[-107.8576,38.4255],[-107.8541,38.4255],[-107.8539,38.4272]]],"drycedar":[[[-107.6858,38.4161],[-107.6987,38.4166],[-107.7054,38.4192],[-107.7073,38.4209],[-107.7121,38.4222],[-107.7144,38.4259],[-107.7182,38.4291],[-107.7214,38.4302],[-107.7251,38.4289],[-107.7326,38.4294],[-107.7356,38.4285],[-107.7382,38.4243],[-107.7409,38.4231],[-107.7413,38.4219],[-107.7429,38.4218],[-107.7506,38.4152],[-107.7533,38.4149],[-107.7541,38.4131],[-107.759,38.4123],[-107.7703,38.4122],[-107.7764,38.4092],[-107.7849,38.4078],[-107.7856,38.4071],[-107.7864,38.4081],[-107.788,38.4073],[-107.7902,38.4077],[-107.7943,38.4095],[-107.7956,38.4113],[-107.7975,38.4118],[-107.8016,38.4152],[-107.8036,38.4148],[-107.804,38.4158],[-107.807,38.4168],[-107.8082,38.4192],[-107.8111,38.4192],[-107.8141,38.4179],[-107.8152,38.4191],[-107.816,38.4184],[-107.8168,38.419],[-107.8186,38.4185],[-107.8244,38.4207],[-107.8298,38.4214],[-107.8321,38.4257],[-107.8346,38.4268],[-107.8354,38.4263],[-107.8384,38.4295],[-107.8379,38.4304],[-107.8407,38.4314],[-107.8414,38.4332],[-107.8438,38.4334],[-107.8497,38.4464],[-107.8519,38.4486],[-107.8634,38.451],[-107.8681,38.4545],[-107.8704,38.4545],[-107.8723,38.4566]]]},"cells":{"cow":[[1669,2236,2236],[1670,2235,2236],[1671,2233,2236],[1672,2231,2237],[1673,2230,2238],[1674,2226,2239],[1675,2224,2240],[1676,2226,2241],[1677,2227,2241],[1678,2229,2241],[1679,2231,2241],[1680,2232,2242],[1681,2232,2242],[1682,2234,2242],[1683,2234,2243],[1684,2235,2243],[1685,2234,2242],[1686,2234,2242],[1687,2234,2243],[1688,2234,2243],[1689,2235,2243],[1690,2236,2243],[1691,2237,2243],[1692,2238,2246],[1693,2239,2248],[1694,2239,2247],[1695,2239,2247],[1696,2238,2246],[1697,2237,2245],[1698,2239,2245],[1699,2240,2241],[1699,2243,2245]],"horsefly":[[1657,2214,2214],[1658,2214,2214],[1659,2215,2215],[1660,2215,2215],[1661,2216,2217],[1662,2216,2217],[1663,2216,2217],[1664,2216,2217],[1665,2215,2218],[1666,2214,2218],[1667,2213,2219],[1668,2211,2218],[1669,2210,2217],[1670,2209,2216],[1671,2209,2215],[1672,2210,2214],[1673,2210,2213],[1674,2208,2213],[1675,2206,2213],[1676,2204,2213],[1677,2203,2214],[1678,2205,2213],[1679,2206,2211],[1680,2207,2209]],"drycedar":[[1655,2214,2214],[1656,2214,2215],[1656,2221,2222],[1656,2225,2230],[1657,2216,2216],[1657,2219,2230],[1658,2218,2231],[1659,2219,2231],[1660,2221,2231],[1661,2230,2231]]}};
   const GEO = {
     colona: [-107.779225, 38.331431], up: [-107.792366, 38.358057], outfall: [-107.800060, 38.370821],
     road: [-107.810140, 38.377959], md: [-107.826349, 38.394471], sv: [-107.826060, 38.399695],
     lout: [-107.861902, 38.437548], chipeta: [-107.871242, 38.440632], wsp: [-107.879541, 38.464796],
     taviwach: [-107.905813, 38.498438], portal: [-107.756740, 38.482886], scRoad: [-107.801727, 38.378043],
     town: [-107.842, 38.479], dc: [-107.866944, 38.453056],
+    dam: [-107.75774, 38.236], cowGauge: [-107.75198, 38.245126], cowJoin: [-107.76522, 38.25380],
   };
   const VIEW = { west: -107.935, east: -107.742, north: 38.528, south: 38.292 };
 
   const SERIES = {
     flow: [
-      { key: 'est', label: 'Town run', color: 'var(--river)', band: true },
+      { key: 'est', label: 'Town run', color: 'var(--river)', band: ['lo', 'hi'] },
       { key: 'colona', label: 'Colona', color: 'var(--ref)', dashed: true },
     ],
     drivers: [
       { key: 'south', label: 'South Canal', color: 'var(--gunnison)' },
       { key: 'ridgway', label: 'Ridgway', color: 'var(--river)' },
       { key: 'canals', label: 'Canals', color: 'var(--canal)' },
+      { key: 'cow', label: 'Cow Cr.', color: 'var(--ink-2)', dashed: true },
+    ],
+    outlook: [
+      { key: 'est', label: 'Estimated', color: 'var(--river)', band: ['lo', 'hi'] },
+      { key: 'nc', label: 'Cow Creek routing', color: 'var(--phos)', band: ['nlo', 'nhi'], dash: 'line-nc', bandOpacity: 0.12 },
+      { key: 'fc', label: 'CBRFC forecast', color: 'var(--river)', dash: 'line-fc' },
+    ],
+    cow: [
+      { key: 'cow', label: 'Cow Creek', color: 'var(--ink-2)' },
+      { key: 'cfc', label: 'CBRFC forecast', color: 'var(--ink-2)', dash: 'line-fc' },
     ],
   };
   const FEED = [
     { key: 'ridgway', id: '09147025', name: 'Ridgway Res. release', role: 'in', url: 'https://waterdata.usgs.gov/monitoring-location/USGS-09147025/' },
+    { key: 'cow', id: 'COWCRKCO', name: 'Cow Creek', role: 'in', url: 'https://dwr.state.co.us/Tools/Stations/COWCRKCO' },
     { key: 'colona', id: '09147500', name: 'Uncompahgre at Colona', role: 'ref', url: 'https://waterdata.usgs.gov/monitoring-location/USGS-09147500/' },
     { key: 'up', id: 'UNCUPSCO', name: 'Above South Canal', role: 'gauge', url: 'https://dwr.state.co.us/Tools/Stations/UNCUPSCO' },
     { key: 'south', id: 'SOUCANCO', name: 'South Canal at tunnel', role: 'gunnison', url: 'https://dwr.state.co.us/Tools/Stations/SOUCANCO' },
@@ -451,11 +588,17 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   const dwrList = encodeURIComponent(Object.values(DWR_IDS).join(','));
   const usgsList = Object.values(USGS_IDS).join(',');
 
-  async function fetchOk(url, ms) {
+  const fmtDayHour = d3.utcFormat('%a %-I %p');
+  const listFmt = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' });
+  const inches = (mm) => (mm == null ? '—' : mm < 0.127 ? '0' : d3.format('.2f')(mm / 25.4));
+  const HOUR = 36e5;
+  const lastWith = (rows, k) => { for (let i = rows.length - 1; i >= 0; i--) if (rows[i][k] != null) return rows[i]; return null; };
+
+  async function fetchOk(url, ms, init = {}) {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), ms);
     try {
-      const res = await fetch(url, { signal: ctl.signal });
+      const res = await fetch(url, { ...init, signal: ctl.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res;
     } finally { clearTimeout(timer); }
@@ -601,6 +744,57 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     return { rows: toRows(rows), failed, day: today };
   }
 
+  // CBRFC forecasts through the National Water Prediction Service: hourly flow, UTC times
+  async function loadForecast() {
+    const one = async (lid) => {
+      const d = await getJSON(`${NWPS}${lid}/stageflow/forecast`);
+      const k = String(d.secondaryUnits || '').toLowerCase() === 'kcfs' ? 1000 : 1;
+      const pts = (d.data || []).filter((p) => p.validTime && Number.isFinite(p.secondary) && p.secondary >= 0)
+        .map((p) => ({ x: +clockDate(localKey(new Date(p.validTime))), q: p.secondary * k }));
+      const issued = d.issuedTime ? new Date(d.issuedTime) : null;
+      const fresh = issued && (Date.now() - issued) / HOUR <= FC_MAX_AGE_HOURS;
+      return pts.length && fresh ? { issued, pts } : null;
+    };
+    const [road, cow] = await Promise.allSettled([one(NWPS_IDS.road), one(NWPS_IDS.cow)]);
+    return { road: road.status === 'fulfilled' ? road.value : null, cow: cow.status === 'fulfilled' ? cow.value : null, failed: road.status !== 'fulfilled' };
+  }
+
+  // Radar: one request per period samples every MRMS cell inside the three drainages
+  const CELLS = [];
+  for (const [basin, runs] of Object.entries(BASIN_GEO.cells)) {
+    for (const [row, c0, c1] of runs) for (let c = c0; c <= c1; c++) CELLS.push({ basin, lon: -129.995 + 0.01 * c, lat: 54.995 - 0.01 * row });
+  }
+  const CELL_GEOM = JSON.stringify({ points: CELLS.map((c) => [+c.lon.toFixed(3), +c.lat.toFixed(3)]), spatialReference: { wkid: 4326 } });
+  async function loadRadar() {
+    const q = new URLSearchParams({ where: "name LIKE 'conus_QPE_%'", outFields: 'objectid,name,idp_validendtime', returnGeometry: 'false', f: 'json' });
+    const cat = await getJSON(`${MRMS}query?${q}`);
+    const items = Object.fromEntries((cat.features || []).map((f) => [f.attributes.name, f.attributes]));
+    const out = { end: null, cells: {}, mean: {} };
+    await Promise.all(RAIN_WINDOWS.map(async (w) => {
+      const it = items[`conus_QPE_${w}`];
+      if (!it) return;
+      const body = new URLSearchParams({
+        geometry: CELL_GEOM, geometryType: 'esriGeometryMultipoint', returnFirstValueOnly: 'true', sampleCount: '2000', f: 'json',
+        mosaicRule: JSON.stringify({ mosaicMethod: 'esriMosaicLockRaster', lockRasterIds: [it.objectid] }),
+      });
+      const d = await (await fetchOk(`${MRMS}getSamples`, 25000, { method: 'POST', body })).json();
+      const vals = new Array(CELLS.length).fill(null);
+      for (const s of d.samples || []) {
+        const v = parseFloat(s.value);
+        if (Number.isFinite(v) && v >= 0 && s.locationId >= 0 && s.locationId < vals.length) vals[s.locationId] = v;
+      }
+      out.cells[w] = vals;
+      out.mean[w] = {};
+      for (const b of Object.keys(BASIN_INFO)) {
+        const v = vals.filter((x, i) => x != null && CELLS[i].basin === b);
+        out.mean[w][b] = v.length ? d3.mean(v) : null;
+      }
+      if (it.idp_validendtime) out.end = new Date(it.idp_validendtime);
+    }));
+    if (!Object.keys(out.cells).length) throw new Error('no radar');
+    return out;
+  }
+
   // ---------- the estimate right now ----------
   function nowContext(now, weekRows) {
     const x = clockDate(nowKey());
@@ -680,6 +874,11 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     set('v-est', e ? num(e.est) : '—');
     document.querySelectorAll('.fill-err-on').forEach((el) => { el.textContent = fmt(ERR_TUNNEL_ON * 100); });
     document.querySelectorAll('.fill-err-off').forEach((el) => { el.textContent = fmt(ERR_TUNNEL_OFF * 100); });
+    document.querySelectorAll('.fill-storms').forEach((el) => { el.textContent = ROUTE.storms; });
+    document.querySelectorAll('.fill-rise-lo').forEach((el) => { el.textContent = ROUTE.rise.lo; });
+    document.querySelectorAll('.fill-rise-mid').forEach((el) => { el.textContent = ROUTE.rise.mid; });
+    document.querySelectorAll('.fill-rise-hi').forEach((el) => { el.textContent = ROUTE.rise.hi; });
+    document.querySelectorAll('.fill-watch').forEach((el) => { el.textContent = d3.format('.2f')(RAIN_WATCH_MM / 25.4); });
     const odd = renderChecks(gaugeChecks(weekRows));
 
     const notes = [];
@@ -727,6 +926,286 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     tr.className = 'est';
     cell(tr, 'EST'); cell(tr, 'Town run at the park'); cell(tr, e ? num(e.est) : '—', 'n'); cell(tr, e ? fmtShortTime(e.asof) : '—', 'n'); cell(tr, '= MODEL');
     body.append(tr);
+  }
+
+  // ---------- outlook ----------
+  // Cow Creek routing on the hourly rows: Colona follows Cow Creek and the dam release, Road Bridge follows Colona.
+  // Readings past each gauge's latest hour are held flat, so the routed line runs only as far as Cow Creek has reported.
+  function routeStorm(rows) {
+    const byX = new Map(rows.map((r) => [+r.x, r]));
+    const get = (k, x) => { const r = byX.get(x); return r && r[k] != null ? r[k] : null; };
+    const rb = lastWith(rows, 'road'), col = lastWith(rows, 'colona'), cow = lastWith(rows, 'cow'), rel = lastWith(rows, 'ridgway');
+    if (!rb || !col || !cow || !rel) return null;
+    if (+rb.x - +cow.x > 4 * HOUR || +rb.x - +col.x > 3 * HOUR || +rb.x - +rel.x > 3 * HOUR) return null;
+    const lag = ROUTE.lagCowColona * HOUR;
+    const step = ROUTE.lagColonaRoad * HOUR;
+    const held = (k, x, last) => (x >= +last.x ? last[k] : get(k, x));
+    const colAt = (x) => {
+      if (x <= +col.x) return get('colona', x);
+      const c1 = held('cow', x - lag, cow), c0 = held('cow', +col.x - lag, cow);
+      const r1 = held('ridgway', x - lag, rel), r0 = held('ridgway', +col.x - lag, rel);
+      if ([c1, c0, r1, r0].some((v) => v == null)) return null;
+      return col.colona + ROUTE.cowToColona * (c1 - c0) + ROUTE.releaseToColona * (r1 - r0);
+    };
+    const col0 = colAt(+rb.x - step);
+    if (col0 == null) return null;
+    const end = Math.max(+rb.x + HOUR, +cow.x + lag + step);
+    const pts = [];
+    for (let x = +rb.x + HOUR; x <= end; x += HOUR) {
+      const c = colAt(x - step);
+      if (c == null) break;
+      pts.push({ x, road: Math.max(0, rb.road + (c - col0)) });
+    }
+    const cow3 = get('cow', +cow.x - 3 * HOUR);
+    return { from: rb, pts, cow: cow.cow, cowX: +cow.x, cowRise: cow3 == null ? null : cow.cow - cow3 };
+  }
+
+  function outlookData() {
+    const rows = state.week ? state.week.rows : [];
+    const now = state.now;
+    const nowX = +clockDate(nowKey());
+    const shift = ROUTE.roadToPark * HOUR;
+    const x0 = nowX - 24 * HOUR, x1 = nowX + OUTLOOK_HOURS * HOUR;
+    const park = new Map(), creek = new Map();
+    const at = (m, x) => { if (!m.has(x)) m.set(x, { x: new Date(x) }); return m.get(x); };
+    for (const r of rows) {
+      if (r.est != null && +r.x + shift >= x0) Object.assign(at(park, +r.x + shift), { est: Math.max(0, r.est), lo: r.lo, hi: r.hi });
+      if (r.cow != null && +r.x >= x0) at(creek, +r.x).cow = r.cow;
+    }
+    const out = { x0, x1, nowX, route: null, nc: null, fc: null, cowFc: null };
+    // canal diversions and context held at their latest readings
+    const e = now ? estimateNow(now, rows) : null;
+    const canal = e ? { md: now.md.v, lout: now.lout.v, sv: e.svTyp ? null : e.sv } : null;
+    const ctx = now ? nowContext(now, rows) : null;
+    const town = (road) => (canal ? model({ road, ...canal }, ctx) : null);
+    const rb = lastWith(rows, 'road');
+    const startX = rb ? +rb.x + shift : null;
+
+    const route = rows.length ? routeStorm(rows) : null;
+    if (route && canal && rb.est != null) {
+      out.route = route;
+      Object.assign(at(park, startX), { nc: Math.max(0, rb.est), nlo: rb.lo, nhi: rb.hi });
+      let peak = null;
+      const { lo: a, mid, hi: b } = ROUTE.rise;
+      for (const p of route.pts) {
+        const routed = p.road - route.from.road;
+        const rise = mid * routed;
+        const m = town(route.from.road + rise);
+        const [r1, r2] = [a * routed, b * routed].sort((u, v) => u - v);
+        const est = Math.max(0, m.est);
+        Object.assign(at(park, p.x + shift), { nc: est, nlo: Math.max(0, est - Math.hypot(m.est - m.lo, rise - r1)), nhi: est + Math.hypot(m.hi - m.est, r2 - rise) });
+        if (!peak || Math.abs(rise) > Math.abs(peak.rise)) peak = { rise, x: p.x + shift, est, lo: r1, hi: r2 };
+      }
+      out.nc = peak;
+    }
+
+    const F = state.fc && state.fc.road;
+    if (F && rb && rb.est != null && canal) {
+      const pts = F.pts;
+      const qAt = (x) => {
+        for (let i = 1; i < pts.length; i++) {
+          if (pts[i - 1].x <= x && pts[i].x >= x) return pts[i - 1].q + (pts[i].q - pts[i - 1].q) * ((x - pts[i - 1].x) / ((pts[i].x - pts[i - 1].x) || 1));
+        }
+        return null;
+      };
+      const q0 = qAt(+rb.x);
+      const offset = q0 == null ? 0 : rb.road - q0;
+      at(park, startX).fc = Math.max(0, rb.est);
+      let peak = null, low = null;
+      for (const p of pts) {
+        if (p.x <= +rb.x || p.x + shift > x1) continue;
+        const road = Math.max(0, p.q + offset * Math.exp(-(p.x - +rb.x) / (FC_BLEND_HOURS * HOUR)));
+        const m = town(road);
+        if (!m) continue;
+        const est = Math.max(0, m.est);
+        at(park, p.x + shift).fc = est;
+        if (!peak || est > peak.est) peak = { est, x: p.x + shift };
+        if (!low || est < low.est) low = { est, x: p.x + shift };
+      }
+      if (peak) out.fc = { peak, low, base: Math.max(0, rb.est), issued: F.issued, offset };
+    }
+
+    const C = state.fc && state.fc.cow;
+    if (C) {
+      let peak = null;
+      for (const p of C.pts) {
+        if (p.x < x0 || p.x > x1) continue;
+        at(creek, p.x).cfc = p.q;
+        if (p.x >= nowX && (!peak || p.q > peak.q)) peak = p;
+      }
+      // is Cow Creek keeping up with the forecast? compare at its latest hourly reading
+      const cw = lastWith(rows, 'cow');
+      const f = cw ? C.pts.find((p) => p.x === +cw.x) : null;
+      out.cowFc = { issued: C.issued, peak, track: f ? { obs: cw.cow, fc: f.q } : null };
+    }
+    const sorted = (m) => [...m.values()].sort((a, b) => a.x - b.x);
+    out.parkRows = sorted(park);
+    out.cowRows = sorted(creek);
+    return out;
+  }
+
+  function renderOutlook() {
+    const o = outlookData();
+    state.outlook = o;
+    const facts = [];
+    const r = state.radar;
+    const wet = r && r.mean['06H'] ? Object.keys(BASIN_INFO).filter((b) => (r.mean['06H'][b] ?? 0) >= RAIN_WATCH_MM) : [];
+    let head = o.fc ? 'No storm rise in sight.' : 'No storm rise showing at the gauges.';
+    let level = 'calm';
+    let short = 'Steady';
+    const ncRise = o.nc ? o.nc.rise : 0;
+    const fcRise = o.fc ? o.fc.peak.est - o.fc.base : 0;
+    const fcDrop = o.fc ? o.fc.low.est - o.fc.base : 0;
+    if (o.nc && ncRise >= RISE_NOTICE_CFS) {
+      level = 'rise';
+      head = `Cow Creek is rising. About +${fmt(ncRise)} cfs reaching the park by ${fmtClock(new Date(o.nc.x))} (likely +${fmt(o.nc.lo)} to +${fmt(o.nc.hi)}).`;
+      short = `Rising, +${fmt(ncRise)} by ${fmtClock(new Date(o.nc.x))}`;
+    } else if (o.fc && fcRise >= Math.max(30, 0.15 * o.fc.base)) {
+      level = 'rise';
+      head = `CBRFC expects a rise: about ${fmt(o.fc.peak.est)} cfs at the park around ${fmtDayHour(new Date(o.fc.peak.x))}.`;
+      short = `Forecast ~${fmt(o.fc.peak.est)}, ${fmtDayHour(new Date(o.fc.peak.x))}`;
+    } else if (o.nc && ncRise <= -RISE_NOTICE_CFS) {
+      head = `Falling: down about ${fmt(-ncRise)} cfs at the park by ${fmtClock(new Date(o.nc.x))}.`;
+      short = `Falling, ${fmt(ncRise)} by ${fmtClock(new Date(o.nc.x))}`;
+    } else if (o.fc && fcDrop <= -Math.max(30, 0.15 * o.fc.base)) {
+      head = `CBRFC expects the river to drop to about ${fmt(o.fc.low.est)} cfs by ${fmtDayHour(new Date(o.fc.low.x))}.`;
+      short = `Forecast ~${fmt(o.fc.low.est)}, ${fmtDayHour(new Date(o.fc.low.x))}`;
+    } else if (wet.length) {
+      level = 'watch';
+      head = `Rain on ${listFmt.format(wet.map((b) => BASIN_INFO[b].name))}. No rise showing at the gauges yet.`;
+      short = 'Rain on the creeks';
+    } else if (!o.route && !o.fc) {
+      head = 'No outlook right now: the storm gauges or the forecast are unavailable.';
+      short = '—';
+    }
+    if (o.route) {
+      const dir = o.route.cowRise == null ? '' : Math.abs(o.route.cowRise) < 3 ? ', steady' : o.route.cowRise > 0 ? `, up ${fmt(o.route.cowRise)} in 3 h` : `, down ${fmt(-o.route.cowRise)} in 3 h`;
+      facts.push(`Cow Creek gauge: ${fmt(o.route.cow)} cfs at ${fmtClock(new Date(o.route.cowX))}${dir}. Its water reaches the park about 5 hours later.`);
+    } else facts.push("Cow Creek routing is off: the Cow Creek, Colona or dam gauge hasn't reported in the last few hours.");
+    if (o.fc) {
+      const pk = o.fc.peak.est - o.fc.base >= RISE_NOTICE_CFS ? `peaks near ${fmt(o.fc.peak.est)} cfs at the park ${fmtDayHour(new Date(o.fc.peak.x))}` : `stays near ${fmt(o.fc.base)} cfs at the park`;
+      facts.push(`CBRFC forecast, issued ${fmtClockDay(clockDate(localKey(o.fc.issued)))}: ${pk}.`);
+    } else facts.push(state.fc && state.fc.failed ? "Couldn't reach the CBRFC forecast." : 'No recent CBRFC forecast for the Road Bridge gauge.');
+    if (o.cowFc && o.cowFc.peak && o.route && o.cowFc.peak.q - o.route.cow >= 10) facts.push(`CBRFC expects Cow Creek to peak near ${fmt(o.cowFc.peak.q)} cfs ${fmtDayHour(new Date(o.cowFc.peak.x))}.`);
+    const tr = o.cowFc && o.cowFc.track;
+    if (tr && tr.fc - tr.obs >= 15 && tr.fc >= 1.5 * tr.obs) facts.push(`So far Cow Creek is running well below CBRFC's forecast (${fmt(tr.obs)} cfs against ~${fmt(tr.fc)} expected by now), so the forecast rise may come later or smaller.`);
+    else if (tr && tr.obs - tr.fc >= 15 && tr.obs >= 1.5 * tr.fc) facts.push(`Cow Creek is running above CBRFC's forecast (${fmt(tr.obs)} cfs against ~${fmt(tr.fc)} expected by now), so the forecast may be low.`);
+    const unseen = wet.filter((b) => !BASIN_INFO[b].gauged).map((b) => BASIN_INFO[b].name);
+    if (unseen.length) facts.push(`Radar shows rain on ${listFmt.format(unseen)}, which ${unseen.length > 1 ? 'join' : 'joins'} below every gauge, so runoff from it won't show in the estimate.`);
+    if (wet.includes('cow') && !(o.route && o.route.cowRise >= 5)) facts.push('Radar shows rain on the Cow Creek basin. About half the time, rain like this brings a Cow Creek rise within 12 hours.');
+    $('outlook-head').textContent = head;
+    $('outlook-head').dataset.level = level;
+    $('outlook-facts').replaceChildren(...facts.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
+    $('outlook-now').textContent = short;
+    drawOutlookCharts();
+    renderRadar();
+  }
+
+  // ---------- radar ----------
+  const rainColor = (mm) => { let c = null; for (const [t, col] of RAIN_RAMP) if (mm / 25.4 >= t) c = col; return c; };
+
+  function renderRadar() {
+    const r = state.radar;
+    const body = $('rain-body');
+    body.replaceChildren();
+    for (const [b, info] of Object.entries(BASIN_INFO)) {
+      const tr = document.createElement('tr');
+      const td = (text, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = text; tr.append(c); return c; };
+      const name = td(info.name);
+      const sub = document.createElement('span');
+      sub.className = 'cell-sub';
+      sub.textContent = `${info.sqmi} sq mi · ${info.joins}${info.gauged ? ' · gauged' : ''}`;
+      name.append(sub);
+      for (const w of RAIN_WINDOWS) {
+        const v = r && r.mean[w] ? r.mean[w][b] : null;
+        const c = td(v == null ? '—' : `${inches(v)}″`, 'n');
+        if (w === '06H' && v != null && v >= RAIN_WATCH_MM) c.style.color = 'var(--phos)';
+      }
+      body.append(tr);
+    }
+    const asof = $('radar-asof');
+    if (!r) asof.textContent = state.radarFailed ? "Couldn't reach NOAA's radar service." : 'Radar loading…';
+    else {
+      const t = r.end ? clockDate(localKey(r.end)) : null;
+      const old = r.end && (Date.now() - r.end) / HOUR > 3;
+      asof.textContent = t ? `Radar rain to ${fmtClockDay(t)}${old ? ' (old: the radar feed may be delayed)' : ''}` : 'Radar rain';
+    }
+    const ramp = $('rain-ramp');
+    if (!ramp.childElementCount) {
+      RAIN_RAMP.forEach(([t, col], i) => {
+        const li = document.createElement('li');
+        const sw = document.createElement('span'); sw.style.background = col;
+        const lab = document.createElement('span'); lab.textContent = i === RAIN_RAMP.length - 1 ? `${t}+` : String(t);
+        li.append(sw, lab); ramp.append(li);
+      });
+      const u = document.createElement('li'); u.className = 'ramp-unit'; u.textContent = 'inches'; ramp.append(u);
+    }
+    drawBasinMap();
+  }
+
+  function drawBasinMap() {
+    const el = $('basin-map');
+    el.querySelectorAll('svg').forEach((n) => n.remove());
+    const W = Math.max(280, Math.round(el.clientWidth));
+    const V = { west: -107.985, east: -107.495, north: 38.512, south: 37.99 };
+    const C = Math.cos(38.25 * Math.PI / 180);
+    const pad = 6;
+    const s = (W - 2 * pad) / ((V.east - V.west) * C);
+    const H = Math.round((V.north - V.south) * s + 2 * pad);
+    const P = ([lon, lat]) => [pad + (lon - V.west) * C * s, pad + (V.north - lat) * s];
+    const narrow = W < 420;
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).classed('narrow', narrow);
+    svg.append('defs').append('clipPath').attr('id', 'basin-clip').append('rect').attr('width', W).attr('height', H);
+    const g = svg.append('g').attr('clip-path', 'url(#basin-clip)');
+    for (const lat of [38.0, 38.1, 38.2, 38.3, 38.4, 38.5]) {
+      const [, yy] = P([V.west, lat]);
+      g.append('line').attr('class', 'm-grid').attr('x1', 0).attr('x2', W).attr('y1', yy).attr('y2', yy);
+      g.append('text').attr('class', 'm-gridlab').attr('x', 4).attr('y', yy - 4).text(`${lat.toFixed(1)}°N`);
+    }
+    const win = state.rainWin;
+    const vals = state.radar && state.radar.cells[win];
+    const cw = 0.01 * C * s, ch = 0.01 * s;
+    const cells = g.append('g');
+    if (vals) CELLS.forEach((c, i) => {
+      const v = vals[i];
+      const col = v == null ? null : rainColor(v);
+      if (!col) return;
+      const [cx, cy] = P([c.lon, c.lat]);
+      cells.append('rect').attr('x', cx - cw / 2).attr('y', cy - ch / 2).attr('width', cw + 0.4).attr('height', ch + 0.4).style('fill', col);
+    });
+    const line = d3.line();
+    for (const ring of Object.values(BASIN_GEO.basins)) g.append('path').attr('class', 'b-basin').attr('d', `${line(ring.map(P))}Z`);
+    for (const lines of Object.values(BASIN_GEO.creeks)) for (const l of lines) g.append('path').attr('class', 'b-creek').attr('d', line(l.map(P)));
+    const curve = d3.line().curve(d3.curveCatmullRom.alpha(0.5));
+    g.append('path').attr('class', 'b-river').attr('d', curve(RIVER.slice(0, IDX.taviwach + 1).map(P)));
+    g.append('path').attr('class', 'm-river m-beyond').attr('d', curve(RIVER.slice(IDX.taviwach).map(P))).attr('stroke-width', 1.5);
+    g.append('path').attr('class', 'm-run').attr('d', curve(RIVER.slice(IDX.chipeta, IDX.taviwach + 1).map(P)));
+    // dam, gauges and the park
+    const [dx, dy] = P(GEO.dam);
+    g.append('line').attr('x1', dx - 7).attr('x2', dx + 7).attr('y1', dy + 1).attr('y2', dy + 1).style('stroke', 'var(--ink)').style('stroke-width', 3);
+    const sq = (pt, color) => { const [qx, qy] = P(pt); g.append('rect').attr('class', 'm-node').attr('x', qx - 4).attr('y', qy - 4).attr('width', 8).attr('height', 8).style('fill', color); };
+    sq(GEO.cowGauge, 'var(--ink)');
+    sq(RIVER[IDX.colona], 'var(--ref)');
+    sq(RIVER[IDX.road], 'var(--ink)');
+    const [wx, wy] = P(RIVER[IDX.wsp]);
+    g.append('circle').attr('cx', wx).attr('cy', wy).attr('r', 5).style('fill', 'var(--phos)').style('stroke', 'var(--bg)').style('stroke-width', 2);
+    // labels at hand-picked spots in each drainage
+    const m = state.radar && state.radar.mean[win];
+    const lab = (pt, t, v, anchor = 'start') => {
+      const [lx, ly] = P(pt);
+      const tx = g.append('text').attr('x', lx).attr('y', ly).attr('text-anchor', anchor);
+      tx.append('tspan').attr('class', 'b-lab-t').attr('x', lx).text(t);
+      if (v) tx.append('tspan').attr('class', 'b-lab-v').attr('x', lx).attr('dy', narrow ? 13 : 15).text(v);
+    };
+    const winTxt = win === '01H' ? '1 H' : win === '06H' ? '6 H' : '24 H';
+    const val = (b) => (m && m[b] != null ? `${inches(m[b])} IN · ${winTxt}` : state.radarFailed ? 'NO RADAR' : 'LOADING');
+    lab([-107.70, 38.10], narrow ? 'COW CR. BASIN' : 'COW CREEK BASIN', val('cow'));
+    lab([-107.975, 38.285], narrow ? 'HORSEFLY CR.' : 'HORSEFLY CREEK', val('horsefly'));
+    lab([-107.70, 38.47], narrow ? 'DRY CEDAR CR.' : 'DRY CEDAR CREEK', val('drycedar'));
+    lab([GEO.dam[0] - 0.012, GEO.dam[1] - 0.004], 'RIDGWAY DAM', null, 'end');
+    lab([GEO.cowGauge[0] + 0.01, GEO.cowGauge[1] + 0.008], narrow ? 'GAUGE' : 'COW CR. GAUGE', null);
+    lab([RIVER[IDX.wsp][0] - 0.012, RIVER[IDX.wsp][1] + 0.004], 'PARK', null, 'end');
+    lab([RIVER[IDX.road][0] + 0.012, RIVER[IDX.road][1] - 0.004], 'ROAD BRIDGE', null);
   }
 
   // ---------- flow map ----------
@@ -878,8 +1357,11 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     const cfs = (val) => (val == null ? 'NO READING' : `${fmt(val)} CFS`);
     const takes = (val) => (val == null ? 'NO READING' : val > 0.5 ? `−${fmt(val)} CFS` : '0 CFS');
     const at = (k) => P(RIVER[IDX[k]]);
-    const [ex] = P(RIVER[0]);
+    const [ex] = P(RIVER.find((p) => p[1] >= VIEW.south) || RIVER[0]);
     const rel = v('ridgway');
+    const cowQ = v('cow');
+    const inText = rel == null && cowQ == null ? 'NO READING'
+      : `${rel == null ? '' : `RELEASE ${fmt(rel)}`}${rel != null && cowQ != null ? ' + ' : ''}${cowQ == null ? '' : `COW ${fmt(cowQ)}`} CFS`;
     const svText = !e ? 'NO READING' : e.svTyp ? `~${fmt(e.sv)} CFS ${narrow ? 'TYP' : 'TYPICAL'}` : takes(e.sv);
     const labels = [
       { pr: 9, anchor: at('wsp'), side: 'R', t: narrow ? 'PARK · EST.' : 'WATER SPORTS PARK · EST.', v: est == null ? '---' : `${fmt(Math.max(0, est))} CFS`, big: true, dy: -10 },
@@ -892,7 +1374,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       { pr: 6, anchor: at('outfall'), side: 'R', t: narrow ? 'S. CANAL IN' : 'SOUTH CANAL OUTFALL', v: 'GUNNISON WATER' },
       { pr: 5, anchor: at('up'), side: 'R', t: narrow ? 'UNCUPSCO' : 'ABOVE S. CANAL · UNCUPSCO', v: cfs(v('up')) },
       { pr: 5, anchor: at('colona'), side: 'L', t: narrow ? 'COLONA' : 'COLONA · USGS', v: cfs(v('colona')) },
-      { pr: 5, anchor: [ex, H - 10], side: 'R', t: narrow ? '▲ RIDGWAY RES.' : '▲ FROM RIDGWAY RESERVOIR · 12 KM', v: rel == null ? 'NO READING' : `RELEASE ${fmt(rel)} CFS`, y0: H - 44 },
+      { pr: 5, anchor: [ex, H - 10], side: 'R', t: narrow ? '▲ DAM + COW CR.' : '▲ FROM RIDGWAY DAM (8 KM) + COW CREEK', v: inText, y0: H - 44 },
       { pr: 4, anchor: at('chipeta'), side: 'L', t: 'PUT-IN', v: narrow ? 'CHIPETA LK' : 'CHIPETA LAKE' },
       { pr: 4, anchor: at('taviwach'), side: 'R', t: 'TAKE-OUT', v: narrow ? 'TAVIWACH' : 'TAVIWACH PARK' },
     ];
@@ -985,20 +1467,23 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     el.append(m);
   }
 
-  function drawChart(el, allRows, series, range) {
+  // opts: domain [x0, x1] (ms) fixes the time axis; now (ms) draws a now line; endLabels false drops the right-edge labels;
+  // peak { x, v, text } marks one point; skipMissing leaves empty series out of the tooltip
+  function drawChart(el, allRows, series, range, opts = {}) {
     el.querySelectorAll('svg, .tip, .chart-msg').forEach((n) => n.remove());
     let rows = allRows;
     if (range === '90d' && rows.length) {
       const start = d3.utcDay.offset(rows[rows.length - 1].x, -89);
       rows = rows.filter((d) => d.x >= start);
     }
+    if (opts.domain) rows = rows.filter((d) => +d.x >= opts.domain[0] && +d.x <= opts.domain[1]);
     rows = rows.filter((d) => series.some((s) => d[s.key] != null));
-    if (!rows.length) { chartMessage(el, 'No readings for this time range.'); return; }
+    if (!rows.length) { chartMessage(el, opts.empty || 'No readings for this time range.'); return; }
 
     const W = Math.max(300, Math.round(el.clientWidth));
     const narrow = W < 560;
-    const H = narrow ? 230 : 270;
-    const mt = 12, mb = 28;
+    const H = opts.height ? opts.height(narrow) : narrow ? 230 : 270;
+    const mt = opts.now != null ? 22 : 12, mb = 28;
     const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', el.dataset.label || '');
     const probe = svg.append('text').attr('x', -999).attr('y', -999);
     const textW = (s, cls) => { probe.attr('class', cls).text(s); return probe.node().getComputedTextLength(); };
@@ -1006,23 +1491,25 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     const vals = [];
     for (const d of rows) for (const s of series) {
       if (d[s.key] != null) vals.push(d[s.key]);
-      if (s.band && d.hi != null) vals.push(d.hi);
+      if (s.band && d[s.band[1]] != null) vals.push(d[s.band[1]]);
     }
     const y = d3.scaleLinear([Math.min(0, d3.min(vals)), (d3.max(vals) || 10) * 1.06], [H - mb, mt]).nice();
     const yTicks = y.ticks(narrow ? 4 : 5);
     const ml = Math.ceil(d3.max(yTicks, (t) => textW(fmt(t), 'tick'))) + 10;
 
-    const ends = series.map((s) => {
+    const endLabels = opts.endLabels !== false;
+    const ends = !endLabels ? [] : series.map((s) => {
       const last = [...rows].reverse().find((d) => d[s.key] != null);
       return last ? { s, v: last[s.key], text: `${s.label} ${fmt(last[s.key])}` } : null;
     }).filter(Boolean);
-    const mr = Math.ceil(d3.max(ends, (e) => textW(e.text, 'endlab')) || 0) + 22;
-    const x = d3.scaleUtc(d3.extent(rows, (d) => d.x), [ml, W - mr]);
+    const mr = endLabels ? Math.ceil(d3.max(ends, (e) => textW(e.text, 'endlab')) || 0) + 22 : 14;
+    const x = d3.scaleUtc(opts.domain ? opts.domain.map((v) => new Date(v)) : d3.extent(rows, (d) => d.x), [ml, W - mr]);
 
-    const interval = range === '7d' ? d3.utcDay.every(narrow ? 2 : 1)
+    const interval = opts.domain ? d3.utcDay.every(1)
+      : range === '7d' ? d3.utcDay.every(narrow ? 2 : 1)
       : range === '90d' ? d3.utcWeek.every(narrow ? 4 : 2)
       : d3.utcMonth.every(narrow ? 4 : 2);
-    const xFmt = range === '7d' ? d3.utcFormat('%a %-d') : range === '90d' ? d3.utcFormat('%b %-d') : d3.utcFormat(narrow ? "%b '%y" : '%b %Y');
+    const xFmt = opts.domain || range === '7d' ? d3.utcFormat('%a %-d') : range === '90d' ? d3.utcFormat('%b %-d') : d3.utcFormat(narrow ? "%b '%y" : '%b %Y');
     const xTicks = x.ticks(interval).map((t) => ({ t, label: xFmt(t), w: textW(xFmt(t), 'tick') }));
     probe.remove();
 
@@ -1047,14 +1534,29 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       svg.append('text').attr('class', 'tick').attr('x', cx).attr('y', H - 8).attr('text-anchor', 'middle').text(d.label);
     }
 
+    if (opts.now != null && opts.domain) {
+      const nx = x(new Date(opts.now));
+      svg.append('line').attr('class', 'nowline').attr('x1', nx).attr('x2', nx).attr('y1', mt - 8).attr('y2', H - mb);
+      svg.append('text').attr('class', 'nowlab').attr('x', nx).attr('y', mt - 11).attr('text-anchor', 'middle').text('NOW');
+    }
     for (const s of series.filter((s) => s.band)) {
-      const area = d3.area().defined((d) => d.lo != null && d.hi != null).x((d) => x(d.x)).y0((d) => y(d.lo)).y1((d) => y(d.hi));
-      svg.append('path').datum(rows).attr('d', area).style('fill', s.color).style('fill-opacity', 0.2);
+      const [lk, hk] = s.band;
+      const area = d3.area().defined((d) => d[lk] != null && d[hk] != null).x((d) => x(d.x)).y0((d) => y(d[lk])).y1((d) => y(d[hk]));
+      svg.append('path').datum(rows).attr('d', area).style('fill', s.color).style('fill-opacity', s.bandOpacity ?? 0.2);
     }
     for (const s of [...series].reverse()) {
       const ln = d3.line().defined((d) => d[s.key] != null).x((d) => x(d.x)).y((d) => y(d[s.key]));
-      const p = svg.append('path').datum(rows).attr('class', s.dashed ? 'line line-ref' : 'line').attr('d', ln).style('stroke', s.color);
-      if (!s.dashed) p.attr('filter', `url(#${gid})`);
+      const cls = s.dash ? `line ${s.dash}` : s.dashed ? 'line line-ref' : 'line';
+      const p = svg.append('path').datum(rows).attr('class', cls).attr('d', ln).style('stroke', s.color);
+      if (!s.dash && !s.dashed) p.attr('filter', `url(#${gid})`);
+    }
+    if (opts.peak) {
+      const px = x(new Date(opts.peak.x)), py = y(opts.peak.v);
+      svg.append('circle').attr('class', 'hdot').attr('r', 4).attr('cx', px).attr('cy', py).style('fill', opts.peak.color || 'var(--ink)');
+      const tw = opts.peak.text.length * 6.7;
+      const anchor = px + tw / 2 > W - mr ? 'end' : px - tw / 2 < ml ? 'start' : 'middle';
+      svg.append('text').attr('class', 'annot').attr('x', anchor === 'end' ? px + 6 : anchor === 'start' ? px - 6 : px)
+        .attr('y', Math.max(mt + 2, py - 10)).attr('text-anchor', anchor).text(opts.peak.text);
     }
 
     const placed = ends.map((e) => ({ ...e, y: y(e.v) })).sort((a, b) => a.y - b.y);
@@ -1072,7 +1574,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     tip.className = 'tip';
     tip.hidden = true;
     el.append(tip);
-    const when = range === '7d' ? d3.utcFormat('%a %b %-d, %H:00') : d3.utcFormat('%a %b %-d, %Y');
+    const when = opts.domain ? d3.utcFormat('%a %b %-d, %-I %p') : range === '7d' ? d3.utcFormat('%a %b %-d, %H:00') : d3.utcFormat('%a %b %-d, %Y');
     let current = -1;
     const show = (i) => {
       const d = rows[i];
@@ -1090,14 +1592,16 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       head.textContent = when(d.x);
       tip.append(head);
       for (const s of series) {
+        const val = d[s.key];
+        if (val == null && opts.skipMissing) continue;
         const r = document.createElement('div');
         r.className = 'tip-row';
         const sw = document.createElement('span');
         sw.className = 'tip-sw';
         sw.style.background = s.color;
         const t = document.createElement('span');
-        const val = d[s.key];
-        t.textContent = `${s.label}: ${val == null ? 'no reading' : `${fmt(val)} cfs`}${s.band && val != null ? ` (${fmt(d.lo)}–${fmt(d.hi)})` : ''}`;
+        const band = s.band && val != null && d[s.band[0]] != null ? ` (${fmt(d[s.band[0]])}–${fmt(d[s.band[1]])})` : '';
+        t.textContent = `${s.label}: ${val == null ? 'no reading' : `${fmt(val)} cfs`}${band}`;
         r.append(sw, t);
         tip.append(r);
       }
@@ -1130,8 +1634,22 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     el.onblur = hide;
   }
 
+  // the outlook charts share one time axis: a day back to three days ahead
+  function drawOutlookCharts() {
+    const o = state.outlook;
+    const parkEl = $('chart-outlook'), cowEl = $('chart-cow');
+    if (!o) { chartMessage(parkEl, 'Loading…'); chartMessage(cowEl, 'Loading…'); return; }
+    const domain = [o.x0, o.x1];
+    const pk = o.fc && o.fc.peak.est - o.fc.base >= RISE_NOTICE_CFS
+      ? { x: o.fc.peak.x, v: o.fc.peak.est, text: `peak ~${fmt(o.fc.peak.est)} · ${fmtDayHour(new Date(o.fc.peak.x))}`, color: 'var(--river)' } : null;
+    drawChart(parkEl, o.parkRows, SERIES.outlook, 'outlook', { domain, now: o.nowX, endLabels: false, peak: pk, skipMissing: true, empty: 'No estimate or forecast to show.' });
+    const cpk = o.cowFc && o.cowFc.peak && o.route && o.cowFc.peak.q - o.route.cow >= 10
+      ? { x: o.cowFc.peak.x, v: o.cowFc.peak.q, text: `peak ~${fmt(o.cowFc.peak.q)} · ${fmtDayHour(new Date(o.cowFc.peak.x))}`, color: 'var(--ink-2)' } : null;
+    drawChart(cowEl, o.cowRows, SERIES.cow, 'outlook', { domain, now: o.nowX, endLabels: false, peak: cpk, skipMissing: true, height: (n) => (n ? 190 : 210), empty: 'No Cow Creek readings or forecast.' });
+  }
+
   // ---------- state and wiring ----------
-  const state = { range: '7d', now: null, week: null, daily: null, dailyLoading: null, lastRefresh: 0 };
+  const state = { range: '7d', now: null, week: null, daily: null, dailyLoading: null, lastRefresh: 0, fc: null, radar: null, radarFailed: false, rainWin: '06H', outlook: null };
   const flowEl = $('chart-flow');
   const driversEl = $('chart-drivers');
 
@@ -1161,6 +1679,9 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   async function refresh() {
     setStatus('loading', 'Fetching telemetry…');
     $('refresh').disabled = true;
+    // NOAA's forecast and radar load alongside the gauges but never hold up the estimate
+    const fcP = loadForecast().catch(() => ({ road: null, cow: null, failed: true }));
+    const rdP = loadRadar().then((r) => { state.radarFailed = false; return r; }).catch(() => { state.radarFailed = true; return null; });
     try {
       const [now, week] = await Promise.all([loadLatest(), loadWeek()]);
       state.now = now;
@@ -1170,6 +1691,10 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       drawMap(now);
       if (state.range !== '7d') await ensureDaily();
       drawCharts();
+      const [fc, radar] = await Promise.all([fcP, rdP]);
+      state.fc = fc;
+      if (radar || !state.radar) state.radar = radar;
+      try { renderOutlook(); } catch (err) { $('outlook-head').textContent = 'The outlook is unavailable right now.'; }
       const failed = [...new Set([...now.failed, ...week.failed])];
       const dwrTime = now.road ? fmtClock(clockDate(now.road.t)) : null;
       const usgsTime = now.colona ? fmtClock(clockDate(now.colona.t)) : null;
@@ -1179,15 +1704,23 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       else setStatus('ok', `Live · ${times}`);
     } catch (err) {
       setStatus('error', "Couldn't load readings. Check your connection.");
+      if (!state.outlook) $('outlook-head').textContent = 'The outlook needs the gauge readings, which didn\'t load.';
     } finally {
       $('refresh').disabled = false;
     }
   }
 
-  document.querySelectorAll('.seg button').forEach((b) => {
+  document.querySelectorAll('#rain-seg button').forEach((b) => {
+    b.addEventListener('click', () => {
+      state.rainWin = b.dataset.win;
+      document.querySelectorAll('#rain-seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      drawBasinMap();
+    });
+  });
+  document.querySelectorAll('#range-seg button').forEach((b) => {
     b.addEventListener('click', async () => {
       state.range = b.dataset.range;
-      document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      document.querySelectorAll('#range-seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       if (state.range !== '7d') {
         if (!state.daily) { chartMessage(flowEl, 'Loading history…'); chartMessage(driversEl, 'Loading history…'); }
         await ensureDaily();
@@ -1226,10 +1759,12 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     }
     if (!changed) return;
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { drawMap(state.now); drawCharts(); }, 120);
+    resizeTimer = setTimeout(() => { drawMap(state.now); drawCharts(); drawOutlookCharts(); drawBasinMap(); }, 120);
   });
   ro.observe(flowEl);
   ro.observe($('map'));
+  ro.observe($('chart-outlook'));
+  ro.observe($('basin-map'));
 
   setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, REFRESH_MINUTES * 60e3);
   document.addEventListener('visibilitychange', () => {
@@ -1239,6 +1774,8 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   drawMap(null);
   chartMessage(flowEl, 'Loading…');
   chartMessage(driversEl, 'Loading…');
+  drawOutlookCharts();
+  renderRadar();
   refresh();
 })();
 </script>
