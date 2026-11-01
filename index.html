@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Montrose Town Run Flow</title>
+<meta name="description" content="Estimated Uncompahgre River flow through the Montrose Water Sports Park, figured live from Colorado DWR and USGS gauges.">
+<meta name="theme-color" content="#050a08">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=VT323&display=swap">
+<style>
+/* Layout: a terminal console. Readout, model and feed stack on the left; the flow map spans them on the right; history and notes run full width below. */
+:root {
+  color-scheme: dark;
+  --bg: #050a08;
+  --panel: #08110d;
+  --line: #183326;
+  --line-2: #24493a;
+  --grid: #0f2119;
+  --ink: #d2f8e1;
+  --ink-2: #8ccaa6;
+  --muted: #5f8c75;
+  --phos: #63f5a2;
+  --river: #199e70;
+  --gunnison: #d95926;
+  --canal: #9085e9;
+  --ref: #6f8f80;
+  --warn: #fab219;
+  --bad: #d03b3b;
+  --font-crt: "VT323", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.55 var(--font-mono); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 40; background: radial-gradient(ellipse at 50% 0%, rgba(99, 245, 162, .06), transparent 60%), radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, .45) 100%); }
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 41; background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, .14) 2px 3px); }
+a { color: var(--phos); text-underline-offset: 3px; }
+a:hover { color: var(--ink); }
+:focus-visible { outline: 1px dashed var(--phos); outline-offset: 3px; }
+.wrap {
+  max-width: 84rem; margin-inline: auto; display: grid; gap: 26px;
+  padding-block: max(18px, env(safe-area-inset-top, 0px)) max(36px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.brand { display: grid; gap: 6px; min-width: 0; flex: 1 1 30rem; }
+.path { margin: 0; color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+h1 { margin: 0; font: 400 clamp(38px, 6.4vw, 58px)/.95 var(--font-crt); color: var(--phos); letter-spacing: .03em; text-shadow: 0 0 12px rgba(99, 245, 162, .35); }
+.cursor { display: inline-block; width: .5em; height: .82em; margin-left: .14em; vertical-align: -.04em; background: var(--phos); box-shadow: 0 0 8px rgba(99, 245, 162, .55); }
+.sub { margin: 0; color: var(--ink-2); max-width: 72ch; }
+.sys { display: grid; gap: 8px; justify-items: end; font-size: 12px; color: var(--ink-2); letter-spacing: .04em; }
+.clock { font: 400 26px/1 var(--font-crt); color: var(--ink); letter-spacing: .04em; }
+.clock small { font: 500 11px var(--font-mono); color: var(--muted); margin-left: 6px; letter-spacing: .1em; }
+.status { display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+.led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.status[data-state="ok"] .led { background: var(--phos); box-shadow: 0 0 8px var(--phos); }
+.status[data-state="warn"] .led { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.status[data-state="error"] .led { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
+.btn, .seg button { font: 500 12px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--phos); background: transparent; border: 1px solid var(--line-2); padding: 8px 12px; cursor: pointer; border-radius: 0; }
+.btn:hover, .seg button:hover { border-color: var(--phos); }
+.btn:disabled { color: var(--muted); cursor: progress; }
+.dash { display: grid; gap: 26px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "readout" "map" "model" "feed"; }
+@media (min-width: 1040px) {
+  .dash { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-areas: "readout map" "model map" "feed map"; }
+  .a-map { align-self: stretch; }
+}
+.a-readout { grid-area: readout; } .a-map { grid-area: map; } .a-model { grid-area: model; } .a-feed { grid-area: feed; }
+.panel { position: relative; border: 1px solid var(--line); background: var(--panel); padding: 24px 18px 18px; min-width: 0; display: grid; gap: 14px; align-content: start; }
+.panel-title { position: absolute; top: -9px; left: 12px; margin: 0; padding: 0 8px; background: var(--bg); font: 500 11px/18px var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--phos); white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
+.panel-title::before { content: "[ "; color: var(--muted); }
+.panel-title::after { content: " ]"; color: var(--muted); }
+.readout { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.big { font: 400 clamp(96px, 20vw, 156px)/.8 var(--font-crt); color: var(--phos); text-shadow: 0 0 18px rgba(99, 245, 162, .4); font-variant-numeric: tabular-nums; }
+.big-unit { font: 400 34px/1 var(--font-crt); color: var(--ink-2); letter-spacing: .06em; }
+.kv { display: grid; gap: 6px; margin: 0; }
+.kv-row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+.kv-row dt { color: var(--muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.kv-row dd { margin: 0; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.hint { margin: 0; color: var(--ink-2); font-size: 12.5px; max-width: 64ch; }
+.notice { margin: 0; padding: 9px 11px; border: 1px solid var(--warn); color: var(--warn); font-size: 12.5px; }
+.notice::before { content: "! "; font-weight: 600; }
+.ledger { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ledger td { padding: 6px 0; border-bottom: 1px dashed var(--line); vertical-align: baseline; }
+.ledger .id { color: var(--muted); font-size: 12px; letter-spacing: .06em; width: 7.5em; }
+.ledger .op { width: 1.4em; text-align: center; color: var(--ink-2); }
+.ledger .n { width: 4.5em; text-align: right; font-weight: 500; }
+.ledger tfoot td { border-bottom: 0; border-top: 1px solid var(--line-2); padding-top: 9px; }
+.ledger tfoot .n { font: 400 30px/1 var(--font-crt); color: var(--phos); }
+.table-wrap { overflow-x: auto; }
+.feed { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.feed th { text-align: left; font-weight: 500; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; font-size: 11px; padding: 0 10px 6px 0; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+.feed td { padding: 6px 10px 6px 0; border-bottom: 1px dashed var(--line); white-space: nowrap; }
+.feed .n { text-align: right; }
+.feed .stale { color: var(--warn); }
+.feed tr.est td { color: var(--phos); border-bottom: 0; }
+.role { display: inline-flex; align-items: center; gap: 6px; }
+.glyph { font-size: 10px; }
+.map { position: relative; min-height: 360px; }
+.map svg { display: block; width: 100%; height: auto; overflow: visible; }
+.m-grid { stroke: var(--grid); stroke-width: 1; }
+.m-gridlab { fill: var(--muted); font: 400 10px var(--font-mono); letter-spacing: .04em; }
+.m-town { fill: var(--line-2); font: 400 30px var(--font-crt); letter-spacing: .3em; }
+.m-river { fill: none; stroke: var(--river); stroke-linecap: round; stroke-linejoin: round; }
+.m-dry { stroke-dasharray: 1 5; }
+.m-beyond { opacity: .35; stroke-dasharray: 3 4; }
+.m-run { fill: none; stroke: var(--phos); stroke-width: 1.3; stroke-linecap: round; opacity: .9; }
+.m-flow { fill: none; stroke: var(--ink); stroke-width: 1.1; stroke-linecap: round; stroke-dasharray: 2 13; opacity: .55; }
+.m-south { fill: none; stroke: var(--gunnison); stroke-linecap: round; stroke-dasharray: 7 5; }
+.m-canal { stroke: var(--canal); stroke-linecap: butt; }
+.m-lead { stroke: var(--line-2); stroke-width: 1; fill: none; }
+.m-lab-t { fill: var(--ink-2); font: 500 10px var(--font-mono); letter-spacing: .08em; }
+.m-lab-v { fill: var(--ink); font: 600 12.5px var(--font-mono); font-variant-numeric: tabular-nums; }
+.m-lab-big { fill: var(--phos); font: 400 26px var(--font-crt); }
+.m-node { stroke: var(--bg); stroke-width: 2; }
+.m-ring { fill: none; stroke: var(--phos); stroke-width: 1.5; }
+.m-key { fill: var(--muted); font: 400 10px var(--font-mono); letter-spacing: .06em; }
+.narrow .m-lab-t { font-size: 8.5px; letter-spacing: .06em; }
+.narrow .m-lab-v { font-size: 11px; }
+.narrow .m-lab-big { font-size: 22px; }
+.narrow .m-town { font-size: 20px; letter-spacing: .22em; }
+.narrow .m-gridlab { font-size: 8.5px; }
+.m-keyline { stroke: var(--muted); stroke-width: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .cursor { animation: blink 1.1s steps(1) infinite; }
+  .m-flow { animation: flow 1.4s linear infinite; }
+  .m-pulse { animation: pulse 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+}
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes flow { to { stroke-dashoffset: -15; } }
+@keyframes pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(2.6); opacity: 0; } }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0; padding: 0; font-size: 11.5px; color: var(--ink-2); letter-spacing: .02em; }
+.legend li { display: inline-flex; align-items: center; gap: 8px; }
+.legend svg { flex: none; overflow: visible; }
+.hist { display: grid; gap: 22px; }
+.hist-head { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; }
+.sec-title { margin: 0; font: 400 34px/1 var(--font-crt); color: var(--phos); letter-spacing: .04em; text-shadow: 0 0 10px rgba(99, 245, 162, .3); }
+.seg { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.seg button[aria-pressed="true"] { background: var(--phos); color: var(--bg); border-color: var(--phos); }
+.charts { display: grid; gap: 26px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); }
+.chart { position: relative; min-height: 240px; touch-action: pan-y; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); text-align: center; padding: 16px; letter-spacing: .04em; }
+.chart-msg-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bad); flex: none; }
+.tick { fill: var(--muted); font: 400 11px var(--font-mono); font-variant-numeric: tabular-nums; }
+.endlab { font: 600 11.5px var(--font-mono); font-variant-numeric: tabular-nums; fill: var(--ink); }
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.axisline { stroke: var(--line-2); stroke-width: 1; }
+.line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.line-ref { stroke-dasharray: 5 4; stroke-linecap: butt; }
+.rule { stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 2 3; }
+.hdot { stroke: var(--panel); stroke-width: 2; }
+.tip { position: absolute; z-index: 2; pointer-events: none; background: var(--bg); border: 1px solid var(--line-2); padding: 8px 10px; font-size: 12px; white-space: nowrap; box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .5); }
+.tip-when { color: var(--muted); margin-bottom: 4px; letter-spacing: .04em; }
+.tip-row { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.tip-sw { width: 8px; height: 8px; flex: none; }
+.notes { display: grid; gap: 26px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+.prose { display: grid; gap: 10px; }
+.prose p, .prose ul { margin: 0; max-width: 70ch; color: var(--ink-2); font-size: 13px; }
+.prose ul { padding-left: 0; list-style: none; display: grid; gap: 7px; }
+.prose li { padding-left: 1.4em; text-indent: -1.4em; }
+.prose li::before { content: "> "; color: var(--phos); }
+.prose strong { color: var(--ink); font-weight: 500; }
+.links { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 6px 18px; font-size: 12.5px; }
+footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-top: 1px solid var(--line); padding-top: 14px; max-width: 100%; }
+@media (max-width: 520px) {
+  .panel { padding: 22px 14px 14px; }
+  .sys { justify-items: start; }
+  .ledger .id { width: 6.6em; font-size: 11px; }
+  .ledger td { font-size: 12.5px; }
+  .feed .role-text { display: none; }
+  .feed td, .feed th { padding-right: 8px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <p class="path">UNCOMPAHGRE RIVER // MONTROSE, CO // CHIPETA LAKE → TAVIWACH PARK</p>
+      <h1>TOWN RUN FLOW<span class="cursor" aria-hidden="true"></span></h1>
+      <p class="sub">No gauge sits on the town run, so this console figures the flow from state and federal gauges upstream. Your browser pulls fresh readings each time it loads.</p>
+    </div>
+    <div class="sys">
+      <div class="clock"><span id="clock">--:--:--</span><small id="clock-zone">MT</small></div>
+      <div class="status" id="status" data-state="loading" aria-live="polite"><span class="led" aria-hidden="true"></span><span id="status-text">Fetching telemetry…</span></div>
+      <button type="button" class="btn" id="refresh">Refresh</button>
+    </div>
+  </header>
+
+  <div class="dash">
+    <section class="panel a-readout" aria-labelledby="t-readout">
+      <h2 class="panel-title" id="t-readout">Water Sports Park · est. flow</h2>
+      <div class="readout"><span class="big" id="est">---</span><span class="big-unit">CFS</span></div>
+      <dl class="kv">
+        <div class="kv-row"><dt>Likely range</dt><dd><span id="lo">—</span>–<span id="hi">—</span> cfs</dd></div>
+        <div class="kv-row"><dt>Readings at</dt><dd id="asof">—</dd></div>
+        <div class="kv-row"><dt>Colona gauge</dt><dd><span id="colona-now">—</span> cfs</dd></div>
+        <div class="kv-row"><dt>Ridgway release</dt><dd><span id="ridgway-now">—</span> cfs</dd></div>
+      </dl>
+      <p class="hint">Colona sits above the South Canal and every diversion, so it can read far above or below the town run.</p>
+      <p class="notice" id="notice" hidden></p>
+    </section>
+
+    <section class="panel a-map" aria-labelledby="t-map">
+      <h2 class="panel-title" id="t-map">Flow map · Colona to Taviwach Park</h2>
+      <div class="map" id="map" role="img" aria-label="Map of the Uncompahgre River from Colona to Taviwach Park. The river line widens and narrows with the flow in each stretch. The South Canal brings Gunnison water in below Colona; the Montrose and Delta, Stark-Volkman and Loutsenhizer canals take water out above Chipeta Lake. Values match the telemetry feed table."></div>
+      <ul class="legend">
+        <li><svg width="30" height="12" aria-hidden="true"><line x1="2" y1="6" x2="28" y2="6" stroke="var(--river)" stroke-width="7" stroke-linecap="round"/></svg>River; width shows flow</li>
+        <li><svg width="30" height="12" aria-hidden="true"><line x1="2" y1="6" x2="28" y2="6" stroke="var(--gunnison)" stroke-width="3" stroke-dasharray="7 5"/></svg>Gunnison water, South Canal (route schematic)</li>
+        <li><svg width="30" height="12" aria-hidden="true"><line x1="2" y1="6" x2="22" y2="6" stroke="var(--canal)" stroke-width="3"/><path d="M21 1 L29 6 L21 11 z" fill="var(--canal)"/></svg>Canal taking water out</li>
+        <li><svg width="14" height="12" aria-hidden="true"><rect x="3" y="2" width="8" height="8" fill="var(--ink)"/></svg>River gauge</li>
+        <li><svg width="30" height="12" aria-hidden="true"><line x1="2" y1="6" x2="28" y2="6" stroke="var(--phos)" stroke-width="1.5"/></svg>Town run</li>
+      </ul>
+    </section>
+
+    <section class="panel a-model" aria-labelledby="t-model">
+      <h2 class="panel-title" id="t-model">Model</h2>
+      <table class="ledger">
+        <tbody>
+          <tr><td class="id">UNCBRGCO</td><td>Road Bridge gauge</td><td class="op"></td><td class="n" id="v-road">—</td></tr>
+          <tr><td class="id">MANDCNCO</td><td>M&amp;D Canal</td><td class="op">−</td><td class="n" id="v-md">—</td></tr>
+          <tr><td class="id">4100566A</td><td>Stark-Volkman Ditch</td><td class="op">−</td><td class="n" id="v-sv">—</td></tr>
+          <tr><td class="id">LOUTCNCO</td><td>Loutsenhizer Canal</td><td class="op">−</td><td class="n" id="v-lout">—</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td class="id">EST</td><td>Town run</td><td class="op">=</td><td class="n" id="v-est">—</td></tr>
+        </tfoot>
+      </table>
+      <p class="hint">The Road Bridge gauge sits below the South Canal outfall, so it already carries the Gunnison water. The West Canal draws from the South Canal by a flume over the river and never touches it.</p>
+    </section>
+
+    <section class="panel a-feed" aria-labelledby="t-feed">
+      <h2 class="panel-title" id="t-feed">Telemetry feed · upstream to downstream</h2>
+      <div class="table-wrap">
+        <table class="feed">
+          <thead><tr><th scope="col">ID</th><th scope="col">Station</th><th scope="col" class="n">CFS</th><th scope="col" class="n">At</th><th scope="col">Role</th></tr></thead>
+          <tbody id="feed-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="hist" aria-labelledby="t-hist">
+    <div class="hist-head">
+      <h2 class="sec-title" id="t-hist">&gt; HISTORY</h2>
+      <div class="seg" role="group" aria-label="Time range for both charts">
+        <button type="button" data-range="7d" aria-pressed="true">7 days</button>
+        <button type="button" data-range="90d" aria-pressed="false">90 days</button>
+        <button type="button" data-range="all" aria-pressed="false">Since 2025</button>
+      </div>
+    </div>
+    <div class="charts">
+      <section class="panel" aria-labelledby="t-flow">
+        <h3 class="panel-title" id="t-flow">Town run vs. Colona gauge</h3>
+        <ul class="legend">
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--river)" stroke-width="2.5"/></svg>Town run, estimated</li>
+          <li><svg width="22" height="10" aria-hidden="true"><rect x="1" y="0" width="20" height="10" fill="var(--river)" opacity=".22"/></svg>Likely range</li>
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--ref)" stroke-width="2" stroke-dasharray="5 4"/></svg>Colona gauge</li>
+        </ul>
+        <div class="chart" id="chart-flow" tabindex="0" data-label="Estimated town-run flow and the Colona gauge over time, in cubic feet per second. Arrow keys step through values."></div>
+      </section>
+      <section class="panel" aria-labelledby="t-drivers">
+        <h3 class="panel-title" id="t-drivers">What's driving it</h3>
+        <ul class="legend">
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--gunnison)" stroke-width="2.5"/></svg>South Canal at the tunnel</li>
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--river)" stroke-width="2.5"/></svg>Ridgway Reservoir release</li>
+          <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--canal)" stroke-width="2.5"/></svg>Canals above town, combined</li>
+        </ul>
+        <div class="chart" id="chart-drivers" tabindex="0" data-label="South Canal flow, Ridgway Reservoir release and combined canal diversions over time, in cubic feet per second. Arrow keys step through values."></div>
+      </section>
+    </div>
+  </section>
+
+  <div class="notes">
+    <section class="panel prose" aria-labelledby="t-assume">
+      <h2 class="panel-title" id="t-assume">What the estimate assumes</h2>
+      <p>The likely range assumes each gauge is good to about <strong id="err-pct">6</strong> percent. It is widest when the canals take most of the river, because gauge errors add up while the flows cancel.</p>
+      <ul>
+        <li>Dry Cedar Creek, storm drains and irrigation return flows enter in town and aren't measured, so the park probably runs a little above the estimate.</li>
+        <li>Water passing the Road Bridge gauge reaches the park a few hours later.</li>
+        <li>The Stark-Volkman Ditch has reported only since September 2026. When it isn't reporting, it counts as zero.</li>
+        <li>No field check yet. Gauges a few miles apart often disagree noticeably, so treat the number as a guide, not a measurement.</li>
+        <li>The canal stations go quiet in winter. The console then shows the last complete reading and says so.</li>
+      </ul>
+    </section>
+    <section class="panel prose" aria-labelledby="t-src">
+      <h2 class="panel-title" id="t-src">Sources</h2>
+      <p>Provisional real-time readings from the <strong>Colorado Division of Water Resources</strong> and the <strong>U.S. Geological Survey</strong>. River course from USGS NHDPlus.</p>
+      <div class="links">
+        <a href="https://waterdata.usgs.gov/monitoring-location/USGS-09147025/" target="_blank" rel="noopener">USGS 09147025 · Below Ridgway Res.</a>
+        <a href="https://waterdata.usgs.gov/monitoring-location/USGS-09147500/" target="_blank" rel="noopener">USGS 09147500 · Colona</a>
+        <a href="https://dwr.state.co.us/Tools/Stations/UNCUPSCO" target="_blank" rel="noopener">UNCUPSCO · Above South Canal</a>
+        <a href="https://dwr.state.co.us/Tools/Stations/SOUCANCO" target="_blank" rel="noopener">SOUCANCO · South Canal</a>
+        <a href="https://dwr.state.co.us/Tools/Stations/UNCBRGCO" target="_blank" rel="noopener">UNCBRGCO · Road Bridge</a>
+        <a href="https://dwr.state.co.us/Tools/Stations/MANDCNCO" target="_blank" rel="noopener">MANDCNCO · M&amp;D Canal</a>
+        <a href="https://dwr.state.co.us/Tools/Stations/4100566A" target="_blank" rel="noopener">4100566A · Stark-Volkman</a>
+        <a href="https://dwr.state.co.us/Tools/Stations/LOUTCNCO" target="_blank" rel="noopener">LOUTCNCO · Loutsenhizer</a>
+      </div>
+    </section>
+  </div>
+
+  <footer>NOT AN OFFICIAL GAUGE · REFRESHES EVERY 15 MIN WHILE OPEN · TIMES ARE MONTROSE LOCAL · LOOK AT THE RIVER BEFORE YOU PUT IN</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  // ---------- settings ----------
+  const TZ = 'America/Denver';
+  const DWR = 'https://dwr.state.co.us/Rest/GET/api/v2/telemetrystations/';
+  const OGC = 'https://api.waterdata.usgs.gov/ogcapi/v0/collections/';
+  const DWR_IDS = { road: 'UNCBRGCO', md: 'MANDCNCO', sv: '4100566A', lout: 'LOUTCNCO', up: 'UNCUPSCO', south: 'SOUCANCO' };
+  const USGS_IDS = { colona: 'USGS-09147500', ridgway: 'USGS-09147025' };
+  const GAUGE_ERR = 0.06;      // assumed error on each gauge, combined in quadrature
+  const STALE_HOURS = 3;       // readings older than this get flagged
+  const SV_MAX_AGE_HOURS = 24; // older Stark-Volkman readings count as zero
+  const REFRESH_MINUTES = 15;
+  const HISTORY_START = '2025-03-01';
+
+  // River course, upstream (south) to downstream (north), simplified from USGS NHDPlus flowlines.
+  const RIVER = [[-107.76286,38.28328],[-107.76385,38.28639],[-107.76303,38.28763],[-107.76309,38.28813],[-107.76338,38.28843],[-107.76471,38.28872],[-107.76602,38.29092],[-107.76735,38.29154],[-107.76778,38.29202],[-107.76813,38.29273],[-107.76784,38.29525],[-107.77004,38.29795],[-107.7701,38.29948],[-107.76937,38.3006],[-107.76896,38.30243],[-107.76896,38.30481],[-107.76834,38.30721],[-107.77043,38.30838],[-107.7702,38.30929],[-107.76935,38.31019],[-107.76938,38.31069],[-107.77127,38.3136],[-107.7717,38.31401],[-107.77304,38.31424],[-107.77335,38.31557],[-107.7742,38.31591],[-107.77405,38.31756],[-107.77445,38.3184],[-107.77425,38.32012],[-107.77375,38.32106],[-107.77395,38.32211],[-107.7748,38.32312],[-107.7759,38.32339],[-107.77645,38.32385],[-107.777,38.32476],[-107.77726,38.32591],[-107.7779,38.32675],[-107.77784,38.32861],[-107.77871,38.32961],[-107.77975,38.33193],[-107.78042,38.33241],[-107.78245,38.33309],[-107.78268,38.33358],[-107.78306,38.33575],[-107.78233,38.33678],[-107.78233,38.33778],[-107.78308,38.3395],[-107.78415,38.34058],[-107.78404,38.3419],[-107.7854,38.34334],[-107.78499,38.3452],[-107.78595,38.34685],[-107.78534,38.34867],[-107.78615,38.34989],[-107.78664,38.35016],[-107.78687,38.35163],[-107.79073,38.35561],[-107.79108,38.35723],[-107.79195,38.3587],[-107.79195,38.35973],[-107.79308,38.3611],[-107.79366,38.36273],[-107.79549,38.36376],[-107.79589,38.36449],[-107.79607,38.36614],[-107.79708,38.36728],[-107.79766,38.36769],[-107.79961,38.36824],[-107.79999,38.36893],[-107.79996,38.36996],[-107.80054,38.37042],[-107.80152,38.3706],[-107.80263,38.37126],[-107.80513,38.37165],[-107.80585,38.37227],[-107.80754,38.37209],[-107.8094,38.37335],[-107.80954,38.37429],[-107.80916,38.37637],[-107.81064,38.37838],[-107.81267,38.37918],[-107.81311,38.37966],[-107.81317,38.38024],[-107.81256,38.38168],[-107.81555,38.38447],[-107.81555,38.38557],[-107.81613,38.38593],[-107.81776,38.38607],[-107.82322,38.3911],[-107.82359,38.39175],[-107.82356,38.3938],[-107.82423,38.39586],[-107.8258,38.39861],[-107.82533,38.40158],[-107.82588,38.40414],[-107.82635,38.40465],[-107.82655,38.40563],[-107.82946,38.40739],[-107.82937,38.4092],[-107.83091,38.41067],[-107.83076,38.41517],[-107.83291,38.41714],[-107.83521,38.41815],[-107.83666,38.41828],[-107.83765,38.41959],[-107.83846,38.41963],[-107.83913,38.41929],[-107.84088,38.41666],[-107.84137,38.41687],[-107.84245,38.4184],[-107.84355,38.41831],[-107.84466,38.41865],[-107.84541,38.42014],[-107.84608,38.42071],[-107.84919,38.42062],[-107.85111,38.42158],[-107.85227,38.42256],[-107.85443,38.42378],[-107.85428,38.42439],[-107.85184,38.42574],[-107.85184,38.42618],[-107.8523,38.42657],[-107.85379,38.42716],[-107.85387,38.4281],[-107.85422,38.42847],[-107.85538,38.42863],[-107.85666,38.42998],[-107.858,38.42977],[-107.86015,38.42995],[-107.85983,38.431],[-107.86082,38.43208],[-107.86137,38.43402],[-107.86207,38.43457],[-107.86196,38.4351],[-107.86097,38.43597],[-107.86146,38.4372],[-107.86236,38.4372],[-107.86306,38.43672],[-107.86498,38.4362],[-107.86638,38.43627],[-107.86736,38.43679],[-107.86879,38.43848],[-107.86876,38.4394],[-107.86754,38.44105],[-107.8676,38.44137],[-107.86911,38.44194],[-107.87001,38.44306],[-107.8717,38.44381],[-107.87187,38.44519],[-107.87307,38.44638],[-107.87216,38.44791],[-107.87231,38.44853],[-107.8733,38.44917],[-107.87388,38.45216],[-107.87339,38.45283],[-107.87228,38.45344],[-107.87225,38.4539],[-107.87362,38.45516],[-107.87362,38.45546],[-107.87237,38.45635],[-107.87237,38.45706],[-107.87423,38.45873],[-107.87609,38.45886],[-107.87665,38.45923],[-107.8772,38.46101],[-107.87764,38.46156],[-107.87964,38.46278],[-107.87996,38.46346],[-107.88031,38.46641],[-107.87953,38.46724],[-107.87956,38.4681],[-107.88014,38.46916],[-107.87921,38.47076],[-107.88002,38.4714],[-107.87967,38.47222],[-107.88008,38.47254],[-107.88241,38.47291],[-107.88311,38.47369],[-107.88404,38.47352],[-107.88497,38.47373],[-107.88608,38.47565],[-107.88695,38.47828],[-107.88852,38.47883],[-107.88814,38.47993],[-107.88844,38.48089],[-107.88992,38.48116],[-107.89068,38.48183],[-107.89193,38.48105],[-107.89367,38.48221],[-107.89399,38.48283],[-107.89408,38.4845],[-107.8965,38.48484],[-107.89688,38.48516],[-107.89635,38.4861],[-107.89635,38.48686],[-107.89694,38.48718],[-107.89816,38.48709],[-107.89964,38.48807],[-107.89956,38.48935],[-107.90043,38.49056],[-107.89991,38.49221],[-107.89991,38.49335],[-107.9002,38.49365],[-107.90055,38.49381],[-107.90151,38.49328],[-107.90273,38.49376],[-107.90392,38.49374],[-107.90509,38.49509],[-107.90663,38.49518],[-107.90643,38.49694],[-107.90698,38.49749],[-107.90725,38.49884],[-107.90923,38.4993],[-107.9103,38.49911],[-107.91141,38.49939],[-107.91112,38.50229],[-107.91182,38.50428],[-107.91194,38.50567],[-107.91465,38.50768],[-107.91558,38.50979],[-107.91779,38.51068],[-107.91887,38.5104],[-107.92064,38.51056],[-107.92248,38.51017],[-107.92309,38.51111],[-107.92463,38.51127],[-107.92886,38.51603],[-107.93124,38.51699],[-107.9327,38.51703],[-107.93308,38.51767],[-107.9343,38.51712],[-107.935,38.51717],[-107.93602,38.51808],[-107.93692,38.51751],[-107.93736,38.51753],[-107.93815,38.51863],[-107.93937,38.51938],[-107.93905,38.52124],[-107.93984,38.52167],[-107.94068,38.52096],[-107.94109,38.52101],[-107.94222,38.52199],[-107.9438,38.52224],[-107.94557,38.52135],[-107.94607,38.52137],[-107.94951,38.52393],[-107.95125,38.52381],[-107.95297,38.52562],[-107.9546,38.52589],[-107.95635,38.52706],[-107.95644,38.52797],[-107.95729,38.52918],[-107.95895,38.52971],[-107.96087,38.53142],[-107.96233,38.53197],[-107.96311,38.53327],[-107.96323,38.53581]];
+  const GEO = {
+    colona: [-107.779225, 38.331431], up: [-107.792366, 38.358057], outfall: [-107.800060, 38.370821],
+    road: [-107.810140, 38.377959], md: [-107.826349, 38.394471], sv: [-107.826060, 38.399695],
+    lout: [-107.861902, 38.437548], chipeta: [-107.871242, 38.440632], wsp: [-107.879541, 38.464796],
+    taviwach: [-107.905813, 38.498438], portal: [-107.756740, 38.482886], scRoad: [-107.801727, 38.378043],
+    town: [-107.842, 38.479],
+  };
+  const VIEW = { west: -107.935, east: -107.742, north: 38.528, south: 38.292 };
+
+  const SERIES = {
+    flow: [
+      { key: 'est', label: 'Town run', color: 'var(--river)', band: true },
+      { key: 'colona', label: 'Colona', color: 'var(--ref)', dashed: true },
+    ],
+    drivers: [
+      { key: 'south', label: 'South Canal', color: 'var(--gunnison)' },
+      { key: 'ridgway', label: 'Ridgway', color: 'var(--river)' },
+      { key: 'canals', label: 'Canals', color: 'var(--canal)' },
+    ],
+  };
+  const FEED = [
+    { key: 'ridgway', id: '09147025', name: 'Ridgway Res. release', role: 'in', url: 'https://waterdata.usgs.gov/monitoring-location/USGS-09147025/' },
+    { key: 'colona', id: '09147500', name: 'Uncompahgre at Colona', role: 'ref', url: 'https://waterdata.usgs.gov/monitoring-location/USGS-09147500/' },
+    { key: 'up', id: 'UNCUPSCO', name: 'Above South Canal', role: 'gauge', url: 'https://dwr.state.co.us/Tools/Stations/UNCUPSCO' },
+    { key: 'south', id: 'SOUCANCO', name: 'South Canal at tunnel', role: 'gunnison', url: 'https://dwr.state.co.us/Tools/Stations/SOUCANCO' },
+    { key: 'road', id: 'UNCBRGCO', name: 'Road Bridge', role: 'gauge', url: 'https://dwr.state.co.us/Tools/Stations/UNCBRGCO' },
+    { key: 'md', id: 'MANDCNCO', name: 'M&D Canal', role: 'out', url: 'https://dwr.state.co.us/Tools/Stations/MANDCNCO' },
+    { key: 'sv', id: '4100566A', name: 'Stark-Volkman Ditch', role: 'out', url: 'https://dwr.state.co.us/Tools/Stations/4100566A' },
+    { key: 'lout', id: 'LOUTCNCO', name: 'Loutsenhizer Canal', role: 'out', url: 'https://dwr.state.co.us/Tools/Stations/LOUTCNCO' },
+  ];
+  const ROLES = {
+    in: { glyph: '▲', text: 'IN', color: 'var(--river)' },
+    gunnison: { glyph: '▲', text: 'IN', color: 'var(--gunnison)' },
+    out: { glyph: '▼', text: 'OUT', color: 'var(--canal)' },
+    gauge: { glyph: '■', text: 'GAUGE', color: 'var(--ink)' },
+    ref: { glyph: '□', text: 'REF', color: 'var(--ref)' },
+  };
+
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const fmt = d3.format(',.0f');
+  const num = (v) => (v == null || !Number.isFinite(v) ? '—' : fmt(v));
+  const partsFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const localKey = (date) => {
+    const p = {};
+    for (const x of partsFmt.formatToParts(date)) p[x.type] = x.value;
+    return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+  };
+  // Montrose clock time held in a Date as if it were UTC, so labels read the same for every viewer
+  const clockDate = (key) => new Date(key.length === 10 ? `${key}T00:00:00Z` : `${key}:00Z`);
+  const addDays = (day, n) => { const d = new Date(`${day}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const mdy = (day) => `${day.slice(5, 7)}/${day.slice(8, 10)}/${day.slice(0, 4)}`;
+  const nowKey = () => localKey(new Date());
+  const hoursAgo = (key) => (clockDate(nowKey()) - clockDate(key)) / 36e5;
+  const fmtClockDay = d3.utcFormat('%-I:%M %p, %b %-d');
+  const fmtClock = d3.utcFormat('%-I:%M %p');
+  const fmtShortTime = (key) => (key.slice(0, 10) === nowKey().slice(0, 10) ? d3.utcFormat('%H:%M')(clockDate(key)) : d3.utcFormat('%b %-d')(clockDate(key)));
+  const usgsName = (id) => Object.keys(USGS_IDS).find((k) => USGS_IDS[k] === id);
+  const dwrName = Object.fromEntries(Object.entries(DWR_IDS).map(([k, id]) => [id, k]));
+  const dwrList = encodeURIComponent(Object.values(DWR_IDS).join(','));
+  const usgsList = Object.values(USGS_IDS).join(',');
+
+  async function fetchOk(url, ms) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), ms);
+    try {
+      const res = await fetch(url, { signal: ctl.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res;
+    } finally { clearTimeout(timer); }
+  }
+  const getJSON = async (url, ms = 25000) => (await fetchOk(url, ms)).json();
+  const getText = async (url, ms = 25000) => (await fetchOk(url, ms)).text();
+
+  function parseUsgsCsv(text) {
+    const lines = text.trim().split(/\r?\n/);
+    const head = (lines.shift() || '').split(',');
+    const iId = head.indexOf('monitoring_location_id');
+    const iT = head.indexOf('time');
+    const iV = head.indexOf('value');
+    const out = [];
+    for (const line of lines) {
+      const c = line.split(',');
+      const v = parseFloat(c[iV]);
+      if (Number.isFinite(v) && v >= 0 && c[iT]) out.push({ id: c[iId], t: c[iT], v });
+    }
+    return out;
+  }
+
+  function derive(r) {
+    const ok = r.road != null && r.md != null && r.lout != null;
+    const sv = r.sv ?? 0;
+    const est = ok ? r.road - r.md - sv - r.lout : null;
+    const err = ok ? GAUGE_ERR * Math.hypot(r.road, r.md, sv, r.lout) : null;
+    return {
+      ...r,
+      x: clockDate(r.key),
+      est,
+      lo: ok ? Math.max(0, est - err) : null,
+      hi: ok ? est + err : null,
+      canals: r.md != null && r.lout != null ? r.md + sv + r.lout : null,
+    };
+  }
+  const toRows = (map) => [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(derive);
+
+  // ---------- data ----------
+  async function loadLatest() {
+    const [dwr, usgs] = await Promise.allSettled([
+      getJSON(`${DWR}telemetrystation/?format=json&abbrev=${dwrList}`),
+      getJSON(`${OGC}latest-continuous/items?f=json&skipGeometry=true&parameter_code=00060&monitoring_location_id=${usgsList}`),
+    ]);
+    const now = { failed: [] };
+    if (dwr.status === 'fulfilled') {
+      for (const r of dwr.value.ResultList || []) {
+        const k = dwrName[r.abbrev];
+        if (k && r.measValue != null && r.measDateTime) now[k] = { v: +r.measValue, t: r.measDateTime.slice(0, 16) };
+      }
+    } else now.failed.push('DWR');
+    if (usgs.status === 'fulfilled') {
+      for (const f of usgs.value.features || []) {
+        const p = f.properties || {};
+        const k = usgsName(p.monitoring_location_id);
+        if (k && p.value != null && (!p.statistic_id || p.statistic_id === '00011')) now[k] = { v: +p.value, t: localKey(new Date(p.time)) };
+      }
+    } else now.failed.push('USGS');
+    return now;
+  }
+
+  async function loadWeek() {
+    const today = nowKey().slice(0, 10);
+    const start = addDays(today, -7);
+    const end = addDays(today, 1);
+    const [dwr, usgs] = await Promise.allSettled([
+      getJSON(`${DWR}telemetrytimeserieshour/?format=json&parameter=DISCHRG&pageSize=50000&abbrev=${dwrList}&startDate=${mdy(start)}&endDate=${mdy(end)}`),
+      getText(`${OGC}continuous/items?f=csv&skipGeometry=true&properties=monitoring_location_id,time,value&parameter_code=00060&limit=10000&monitoring_location_id=${usgsList}&datetime=${addDays(start, -1)}T00:00:00Z/${end}T12:00:00Z`),
+    ]);
+    const rows = new Map();
+    const row = (key) => { if (!rows.has(key)) rows.set(key, { key }); return rows.get(key); };
+    const failed = [];
+    const first = `${start}T00:00`;
+    if (dwr.status === 'fulfilled') {
+      for (const r of dwr.value.ResultList || []) {
+        const k = dwrName[r.abbrev];
+        const key = `${(r.measDate || '').slice(0, 13)}:00`;
+        if (k && r.measValue != null && key >= first) row(key)[k] = +r.measValue;
+      }
+    } else failed.push('DWR');
+    if (usgs.status === 'fulfilled') {
+      const sums = new Map();
+      for (const o of parseUsgsCsv(usgs.value)) {
+        const k = usgsName(o.id);
+        const d = new Date(o.t.replace(' ', 'T'));
+        if (!k || Number.isNaN(+d)) continue;
+        const key = `${localKey(d).slice(0, 13)}:00`;
+        if (key < first) continue;
+        const id = `${key}|${k}`;
+        const s = sums.get(id) || { key, k, sum: 0, n: 0 };
+        s.sum += o.v; s.n += 1; sums.set(id, s);
+      }
+      for (const s of sums.values()) row(s.key)[s.k] = s.sum / s.n;
+    } else failed.push('USGS');
+    return { rows: toRows(rows), failed };
+  }
+
+  async function loadDaily() {
+    const today = nowKey().slice(0, 10);
+    const [dwr, usgs] = await Promise.allSettled([
+      getJSON(`${DWR}telemetrytimeseriesday/?format=json&parameter=DISCHRG&pageSize=50000&abbrev=${dwrList}&startDate=${mdy(HISTORY_START)}&endDate=${mdy(today)}`, 45000),
+      getText(`${OGC}daily/items?f=csv&skipGeometry=true&properties=monitoring_location_id,time,value&parameter_code=00060&statistic_id=00003&limit=10000&monitoring_location_id=${usgsList}&datetime=${HISTORY_START}/${today}`, 45000),
+    ]);
+    const rows = new Map();
+    const row = (key) => { if (!rows.has(key)) rows.set(key, { key }); return rows.get(key); };
+    const failed = [];
+    if (dwr.status === 'fulfilled') {
+      for (const r of dwr.value.ResultList || []) {
+        const k = dwrName[r.abbrev];
+        if (k && r.measValue != null && r.measDate) row(r.measDate.slice(0, 10))[k] = +r.measValue;
+      }
+    } else failed.push('DWR');
+    if (usgs.status === 'fulfilled') {
+      for (const o of parseUsgsCsv(usgs.value)) {
+        const k = usgsName(o.id);
+        if (k) row(o.t.slice(0, 10))[k] = o.v;
+      }
+    } else failed.push('USGS');
+    return { rows: toRows(rows), failed, day: today };
+  }
+
+  // ---------- the estimate right now ----------
+  function estimateNow(now) {
+    if (!now.road || !now.md || !now.lout) return null;
+    const svFresh = !!now.sv && hoursAgo(now.sv.t) <= SV_MAX_AGE_HOURS;
+    const sv = svFresh ? now.sv.v : 0;
+    const est = now.road.v - now.md.v - sv - now.lout.v;
+    const err = GAUGE_ERR * Math.hypot(now.road.v, now.md.v, sv, now.lout.v);
+    const asof = [now.road.t, now.md.t, now.lout.t].sort()[0];
+    return { est, lo: Math.max(0, est - err), hi: est + err, asof, sv, svFresh };
+  }
+
+  function renderNow(now) {
+    const e = estimateNow(now);
+    const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+    set('est', e ? num(Math.max(0, e.est)) : '---');
+    set('lo', e ? num(e.lo) : '—');
+    set('hi', e ? num(e.hi) : '—');
+    set('asof', e ? fmtClockDay(clockDate(e.asof)) : '—');
+    set('colona-now', now.colona ? num(now.colona.v) : '—');
+    set('ridgway-now', now.ridgway ? num(now.ridgway.v) : '—');
+    set('v-road', now.road ? num(now.road.v) : '—');
+    set('v-md', now.md ? num(now.md.v) : '—');
+    set('v-sv', e ? num(e.sv) : '—');
+    set('v-lout', now.lout ? num(now.lout.v) : '—');
+    set('v-est', e ? num(e.est) : '—');
+    set('err-pct', fmt(GAUGE_ERR * 100));
+
+    const notes = [];
+    if (!e) {
+      const missing = ['road', 'md', 'lout'].filter((k) => !now[k]).map((k) => DWR_IDS[k]);
+      notes.push(missing.length ? `No current reading from ${missing.join(', ')}, so there's no estimate right now.` : 'No estimate right now.');
+    } else {
+      if (hoursAgo(e.asof) > STALE_HOURS) notes.push(`These readings are from ${fmtClockDay(clockDate(e.asof))}. The canal stations go quiet in winter, so this may be the last complete reading.`);
+      if (e.est < 0) notes.push('The gauges disagree by more than the water left in the river, so the town run is very low.');
+      if (!e.svFresh) notes.push("The Stark-Volkman Ditch isn't reporting, so it counts as zero.");
+    }
+    $('notice').textContent = notes.join(' ');
+    $('notice').hidden = !notes.length;
+
+    // telemetry feed
+    const body = $('feed-body');
+    body.replaceChildren();
+    const cell = (tr, text, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text; tr.append(td); return td; };
+    for (const f of FEED) {
+      const r = now[f.key];
+      const tr = document.createElement('tr');
+      const idTd = document.createElement('td');
+      const a = document.createElement('a');
+      a.href = f.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = f.id;
+      idTd.append(a); tr.append(idTd);
+      cell(tr, f.name);
+      const shown = f.key === 'sv' && e ? (e.svFresh ? r.v : null) : (r ? r.v : null);
+      cell(tr, num(shown), 'n');
+      const t = cell(tr, r ? fmtShortTime(r.t) : '—', 'n');
+      if (r && hoursAgo(r.t) > STALE_HOURS) { t.classList.add('stale'); t.title = 'Older than 3 hours'; }
+      const roleTd = document.createElement('td');
+      const role = ROLES[f.role];
+      const span = document.createElement('span'); span.className = 'role';
+      const g = document.createElement('span'); g.className = 'glyph'; g.style.color = role.color; g.textContent = role.glyph;
+      const txt = document.createElement('span'); txt.className = 'role-text'; txt.textContent = role.text;
+      span.append(g, txt); roleTd.append(span); tr.append(roleTd);
+      body.append(tr);
+    }
+    const tr = document.createElement('tr');
+    tr.className = 'est';
+    cell(tr, 'EST'); cell(tr, 'Town run at the park'); cell(tr, e ? num(e.est) : '—', 'n'); cell(tr, e ? fmtShortTime(e.asof) : '—', 'n'); cell(tr, '= MODEL');
+    body.append(tr);
+  }
+
+  // ---------- flow map ----------
+  const width = (q) => (q == null || !Number.isFinite(q) ? 1.5 : Math.max(1.5, Math.min(22, 1 + Math.sqrt(Math.max(0, q)) * 0.62)));
+  const COS = Math.cos(38.415 * Math.PI / 180);
+  const nearestIdx = (pt) => {
+    let best = 0, bd = Infinity;
+    RIVER.forEach((q, i) => { const d = ((q[0] - pt[0]) * COS) ** 2 + (q[1] - pt[1]) ** 2; if (d < bd) { bd = d; best = i; } });
+    return best;
+  };
+  const IDX = Object.fromEntries(['colona', 'up', 'outfall', 'road', 'md', 'sv', 'lout', 'chipeta', 'wsp', 'taviwach'].map((k) => [k, nearestIdx(GEO[k])]));
+
+  function drawMap(now) {
+    const el = $('map');
+    el.querySelectorAll('svg').forEach((n) => n.remove());
+    if (!RIVER.length) return;
+    const e = now ? estimateNow(now) : null;
+    const v = (k) => (now && now[k] ? now[k].v : null);
+    const W = Math.max(300, Math.round(el.clientWidth));
+    const spanX = (VIEW.east - VIEW.west) * COS;
+    const spanY = VIEW.north - VIEW.south;
+    const pad = 12;
+    const s = Math.min((W - 2 * pad) / spanX, (940 - 2 * pad) / spanY);
+    const offX = (W - spanX * s) / 2;
+    const H = Math.round(spanY * s + 2 * pad);
+    const P = ([lon, lat]) => [offX + (lon - VIEW.west) * COS * s, pad + (VIEW.north - lat) * s];
+    const pxKm = s / 110.54;
+    const narrow = W < 520;
+
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).classed('narrow', narrow);
+    const defs = svg.append('defs');
+    // filter region in user space: a flat or thin path keeps its glow
+    const glow = defs.append('filter').attr('id', 'map-glow').attr('filterUnits', 'userSpaceOnUse')
+      .attr('x', 0).attr('y', 0).attr('width', W).attr('height', H);
+    glow.append('feGaussianBlur').attr('stdDeviation', 1.8).attr('result', 'b');
+    const merge = glow.append('feMerge');
+    merge.append('feMergeNode').attr('in', 'b');
+    merge.append('feMergeNode').attr('in', 'SourceGraphic');
+    defs.append('clipPath').attr('id', 'map-clip').append('rect').attr('width', W).attr('height', H);
+    defs.append('marker').attr('id', 'map-arrow').attr('viewBox', '0 0 10 10').attr('refX', 2).attr('refY', 5)
+      .attr('markerUnits', 'userSpaceOnUse').attr('markerWidth', 12).attr('markerHeight', 12).attr('orient', 'auto')
+      .append('path').attr('d', 'M0,0 L10,5 L0,10 z').style('fill', 'var(--canal)');
+    const g = svg.append('g').attr('clip-path', 'url(#map-clip)');
+
+    // graticule
+    for (const lat of [38.30, 38.35, 38.40, 38.45, 38.50]) {
+      const [, y] = P([VIEW.west, lat]);
+      g.append('line').attr('class', 'm-grid').attr('x1', 0).attr('x2', W).attr('y1', y).attr('y2', y);
+      g.append('text').attr('class', 'm-gridlab').attr('x', 4).attr('y', y - 4).text(`${lat.toFixed(2)}°N`);
+    }
+    for (const lon of [-107.90, -107.85, -107.80, -107.75]) {
+      const [x] = P([lon, VIEW.south]);
+      g.append('line').attr('class', 'm-grid').attr('x1', x).attr('x2', x).attr('y1', 0).attr('y2', H);
+      g.append('text').attr('class', 'm-gridlab').attr('x', x + 4).attr('y', H - 6).text(`${Math.abs(lon).toFixed(2)}°W`);
+    }
+    const townLayer = g.append('g');
+
+    // South Canal: tunnel portal to the outfall (the route between the three known points is schematic)
+    const south = v('south');
+    g.append('path').attr('class', 'm-south')
+      .attr('d', d3.line().curve(d3.curveCatmullRom.alpha(0.5))([GEO.portal, GEO.scRoad, GEO.outfall].map(P)))
+      .attr('stroke-width', Math.max(1.5, width(south) * 0.8)).style('opacity', south ? 1 : 0.45);
+
+    // river ribbon: width follows the flow in each stretch
+    const est = e ? e.est : null;
+    const afterMd = v('road') != null && v('md') != null ? v('road') - v('md') : null;
+    const stretch = [
+      [0, IDX.colona, v('colona')],
+      [IDX.colona, IDX.up, v('colona')],
+      [IDX.up, IDX.outfall, v('up')],
+      [IDX.outfall, IDX.road, v('road')],
+      [IDX.road, IDX.md, v('road')],
+      [IDX.md, IDX.sv, afterMd],
+      [IDX.sv, IDX.lout, afterMd != null ? afterMd - (e ? e.sv : 0) : null],
+      [IDX.lout, IDX.taviwach, est],
+    ];
+    const line = d3.line().curve(d3.curveCatmullRom.alpha(0.5));
+    const rg = g.append('g').attr('filter', 'url(#map-glow)');
+    for (const [a, b, q] of stretch) {
+      if (b <= a) continue;
+      rg.append('path').attr('class', q != null && q < 15 ? 'm-river m-dry' : 'm-river')
+        .attr('d', line(RIVER.slice(a, b + 1).map(P))).attr('stroke-width', width(q));
+    }
+    g.append('path').attr('class', 'm-river m-beyond').attr('d', line(RIVER.slice(IDX.taviwach).map(P))).attr('stroke-width', 1.5);
+    g.append('path').attr('class', 'm-flow').attr('d', line(RIVER.slice(0, IDX.taviwach + 1).map(P)));
+    g.append('path').attr('class', 'm-run').attr('d', line(RIVER.slice(IDX.chipeta, IDX.taviwach + 1).map(P)));
+
+    // canals taking water out: short arrows from each headgate, drawn apart so they don't cross
+    const canals = [
+      { key: 'md', dir: [-1, 0.3], q: v('md') },
+      { key: 'sv', dir: [-1, -0.5], q: e ? e.sv : v('sv') },
+      { key: 'lout', dir: [1, -0.45], q: v('lout') },
+    ];
+    const len = narrow ? 28 : 42;
+    const arrowEnds = {};
+    for (const c of canals) {
+      const [x0, y0] = P(RIVER[IDX[c.key]]);
+      const n = Math.hypot(c.dir[0], c.dir[1]);
+      const x1 = x0 + (c.dir[0] / n) * len;
+      const y1 = y0 + (c.dir[1] / n) * len;
+      arrowEnds[c.key] = [x1 + (c.dir[0] / n) * 8, y1 + (c.dir[1] / n) * 8];
+      g.append('line').attr('class', 'm-canal').attr('x1', x0).attr('y1', y0).attr('x2', x1).attr('y2', y1)
+        .attr('stroke-width', Math.max(1.5, Math.min(12, width(c.q) * 0.7))).style('opacity', c.q ? 1 : 0.5)
+        .attr('marker-end', 'url(#map-arrow)');
+    }
+
+    // nodes
+    const nodes = g.append('g');
+    const square = (k, color) => { const [x, y] = P(RIVER[IDX[k]]); nodes.append('rect').attr('class', 'm-node').attr('x', x - 4.5).attr('y', y - 4.5).attr('width', 9).attr('height', 9).style('fill', color); };
+    square('colona', 'var(--ref)');
+    square('up', 'var(--ink)');
+    square('road', 'var(--ink)');
+    const [ox, oy] = P(RIVER[IDX.outfall]);
+    nodes.append('circle').attr('class', 'm-node').attr('cx', ox).attr('cy', oy).attr('r', 5).style('fill', 'var(--gunnison)');
+    const [px, py] = P(GEO.portal);
+    nodes.append('rect').attr('class', 'm-node').attr('x', px - 5).attr('y', py - 5).attr('width', 10).attr('height', 10).style('fill', 'var(--gunnison)');
+    for (const k of ['md', 'sv', 'lout']) {
+      const [x, y] = P(RIVER[IDX[k]]);
+      nodes.append('rect').attr('class', 'm-node').attr('x', x - 4).attr('y', y - 4).attr('width', 8).attr('height', 8)
+        .attr('transform', `rotate(45 ${x} ${y})`).style('fill', 'var(--canal)');
+    }
+    for (const k of ['chipeta', 'taviwach']) {
+      const [x, y] = P(RIVER[IDX[k]]);
+      nodes.append('circle').attr('cx', x).attr('cy', y).attr('r', 4.5).style('fill', 'var(--bg)').style('stroke', 'var(--phos)').style('stroke-width', 1.5);
+    }
+    const [wx, wy] = P(RIVER[IDX.wsp]);
+    nodes.append('circle').attr('class', 'm-ring m-pulse').attr('cx', wx).attr('cy', wy).attr('r', 7);
+    nodes.append('circle').attr('cx', wx).attr('cy', wy).attr('r', 6).style('fill', 'var(--phos)').style('stroke', 'var(--bg)').style('stroke-width', 2);
+
+    // labels: placed most important first; each later one moves until it clears the ones already down
+    const cfs = (val) => (val == null ? 'NO READING' : `${fmt(val)} CFS`);
+    const takes = (val) => (val == null ? 'NO READING' : val > 0.5 ? `−${fmt(val)} CFS` : '0 CFS');
+    const at = (k) => P(RIVER[IDX[k]]);
+    const [ex] = P(RIVER[0]);
+    const rel = v('ridgway');
+    const svText = !e ? 'NO READING' : e.svFresh ? takes(e.sv) : (narrow ? 'NO DATA' : 'NOT REPORTING');
+    const labels = [
+      { pr: 9, anchor: at('wsp'), side: 'R', t: narrow ? 'PARK · EST.' : 'WATER SPORTS PARK · EST.', v: est == null ? '---' : `${fmt(Math.max(0, est))} CFS`, big: true, dy: -10 },
+      { pr: 8, anchor: at('road'), side: 'L', t: narrow ? 'UNCBRGCO' : 'ROAD BRIDGE · UNCBRGCO', v: cfs(v('road')) },
+      { pr: 8, anchor: arrowEnds.md, side: 'L', t: narrow ? 'M&D' : 'M&D CANAL', v: takes(v('md')) },
+      { pr: 8, anchor: arrowEnds.lout, side: 'R', t: narrow ? 'LOUTSENHIZER' : 'LOUTSENHIZER CANAL', v: takes(v('lout')) },
+      { pr: 7, anchor: arrowEnds.sv, side: 'L', t: narrow ? 'STARK-VOLK.' : 'STARK-VOLKMAN', v: svText },
+      { pr: 6, anchor: [px, py], side: 'L', t: narrow ? 'GUNNISON TUNNEL' : 'GUNNISON TUNNEL → SOUTH CANAL', v: south == null ? 'NO READING' : south > 0.5 ? `${fmt(south)} CFS` : 'OFF · 0 CFS', dy: 16 },
+      { pr: 6, anchor: at('outfall'), side: 'R', t: narrow ? 'S. CANAL IN' : 'SOUTH CANAL OUTFALL', v: 'GUNNISON WATER' },
+      { pr: 5, anchor: at('up'), side: 'R', t: narrow ? 'UNCUPSCO' : 'ABOVE S. CANAL · UNCUPSCO', v: cfs(v('up')) },
+      { pr: 5, anchor: at('colona'), side: 'L', t: narrow ? 'COLONA' : 'COLONA · USGS', v: cfs(v('colona')) },
+      { pr: 5, anchor: [ex, H - 10], side: 'R', t: narrow ? '▲ RIDGWAY RES.' : '▲ FROM RIDGWAY RESERVOIR · 12 KM', v: rel == null ? 'NO READING' : `RELEASE ${fmt(rel)} CFS`, y0: H - 44 },
+      { pr: 4, anchor: at('chipeta'), side: 'L', t: 'PUT-IN', v: narrow ? 'CHIPETA LK' : 'CHIPETA LAKE' },
+      { pr: 4, anchor: at('taviwach'), side: 'R', t: 'TAKE-OUT', v: narrow ? 'TAVIWACH' : 'TAVIWACH PARK' },
+    ];
+    const lg = g.append('g');
+    const probe = lg.append('text').attr('x', -999).attr('y', -999);
+    const tw = (str, cls) => { probe.attr('class', cls).text(str); return probe.node().getComputedTextLength(); };
+    const gapFor = (L) => (L.big ? 24 : 14);
+    for (const L of labels) {
+      const gap = gapFor(L);
+      L.h = L.big ? (narrow ? 34 : 40) : (narrow ? 27 : 30);
+      L.w = Math.max(tw(L.t, 'm-lab-t'), tw(L.v, L.big ? 'm-lab-big' : 'm-lab-v'));
+      if (L.side === 'L' && L.anchor[0] - gap - L.w < 4) L.side = 'R';
+      if (L.side === 'R' && L.anchor[0] + gap + L.w > W - 4) L.side = 'L';
+      L.x = L.side === 'L' ? L.anchor[0] - gap : L.anchor[0] + gap;
+      L.y0 = L.y0 ?? (L.anchor[1] - L.h / 2 + 4 + (L.dy || 0));
+    }
+    const townW = tw('MONTROSE', 'm-town');
+    probe.remove();
+    const box = (L) => ({ x0: L.side === 'L' ? L.x - L.w : L.x, x1: L.side === 'L' ? L.x : L.x + L.w, y0: L.y, y1: L.y + L.h });
+    const hits = (a, b) => a.x0 < b.x1 + 6 && b.x0 < a.x1 + 6 && a.y0 < b.y1 + 2 && b.y0 < a.y1 + 2;
+    const placed = [];
+    for (const L of [...labels].sort((a, b) => b.pr - a.pr || a.y0 - b.y0)) {
+      L.y = Math.max(4, Math.min(L.y0, H - 22 - L.h));
+      for (let i = 0; i < 30; i++) {
+        const hit = placed.find((p) => hits(box(L), p));
+        if (!hit) break;
+        const down = hit.y1 + 3;
+        const up = hit.y0 - L.h - 3;
+        const downOk = down + L.h <= H - 22;
+        const upOk = up >= 4;
+        L.y = downOk && (!upOk || Math.abs(down - L.y0) <= Math.abs(up - L.y0)) ? down : upOk ? up : down;
+      }
+      placed.push(box(L));
+    }
+    // town watermark: first spot clear of labels, the river and the South Canal; otherwise leave it off
+    const townH = narrow ? 18 : 26;
+    const avoid = RIVER.map(P);
+    for (const [a, b2] of [[GEO.portal, GEO.scRoad], [GEO.scRoad, GEO.outfall]]) {
+      for (let i = 0; i <= 40; i++) avoid.push(P([a[0] + (b2[0] - a[0]) * i / 40, a[1] + (b2[1] - a[1]) * i / 40]));
+    }
+    for (const [cx, cy] of [GEO.town, [-107.832, 38.494], [-107.838, 38.424], [-107.85, 38.512]].map(P)) {
+      const tb = { x0: cx - townW / 2, x1: cx + townW / 2, y0: cy - townH, y1: cy + 4 };
+      const clear = tb.x0 > 4 && tb.x1 < W - 4 && !placed.some((p) => hits(tb, p))
+        && !avoid.some(([x, y]) => x > tb.x0 - 10 && x < tb.x1 + 10 && y > tb.y0 - 10 && y < tb.y1 + 10);
+      if (clear) { townLayer.append('text').attr('class', 'm-town').attr('x', cx).attr('y', cy).attr('text-anchor', 'middle').text('MONTROSE'); break; }
+    }
+    for (const L of labels) {
+      const anchorTxt = L.side === 'L' ? 'end' : 'start';
+      const midY = L.y + L.h / 2 - 3;
+      if (Math.abs(midY - L.anchor[1]) > 7) {
+        lg.append('path').attr('class', 'm-lead').attr('d', `M${L.anchor[0]},${L.anchor[1]} L${L.x + (L.side === 'L' ? 3 : -3)},${midY}`);
+      }
+      const t = lg.append('text').attr('x', L.x).attr('y', L.y + 10).attr('text-anchor', anchorTxt);
+      t.append('tspan').attr('class', 'm-lab-t').attr('x', L.x).text(L.t);
+      t.append('tspan').attr('class', L.big ? 'm-lab-big' : 'm-lab-v').attr('x', L.x).attr('dy', L.big ? (narrow ? 22 : 26) : 15).text(L.v);
+    }
+
+    // scale bar and north arrow
+    const sb = g.append('g').attr('transform', `translate(${pad + 4}, ${H - 40})`);
+    const two = 2 * pxKm;
+    sb.append('line').attr('class', 'm-keyline').attr('x1', 0).attr('x2', two).attr('y1', 0).attr('y2', 0);
+    for (const k of [0, 1, 2]) sb.append('line').attr('class', 'm-keyline').attr('x1', k * pxKm).attr('x2', k * pxKm).attr('y1', -4).attr('y2', 4);
+    sb.append('text').attr('class', 'm-key').attr('x', two + 6).attr('y', 4).text('2 KM');
+    const na = g.append('g').attr('transform', `translate(${W - pad - 14}, ${pad + 34})`);
+    na.append('path').attr('d', 'M0,-14 L6,4 L0,0 L-6,4 z').style('fill', 'var(--muted)');
+    na.append('text').attr('class', 'm-key').attr('x', 0).attr('y', 18).attr('text-anchor', 'middle').text('N');
+  }
+
+  // ---------- charts ----------
+  function chartMessage(el, text, isError) {
+    el.querySelectorAll('svg, .tip, .chart-msg').forEach((n) => n.remove());
+    const m = document.createElement('div');
+    m.className = 'chart-msg';
+    if (isError) { const dot = document.createElement('span'); dot.className = 'chart-msg-dot'; m.append(dot); }
+    const t = document.createElement('span');
+    t.textContent = text;
+    m.append(t);
+    el.append(m);
+  }
+
+  function drawChart(el, allRows, series, range) {
+    el.querySelectorAll('svg, .tip, .chart-msg').forEach((n) => n.remove());
+    let rows = allRows;
+    if (range === '90d' && rows.length) {
+      const start = d3.utcDay.offset(rows[rows.length - 1].x, -89);
+      rows = rows.filter((d) => d.x >= start);
+    }
+    rows = rows.filter((d) => series.some((s) => d[s.key] != null));
+    if (!rows.length) { chartMessage(el, 'No readings for this time range.'); return; }
+
+    const W = Math.max(300, Math.round(el.clientWidth));
+    const narrow = W < 560;
+    const H = narrow ? 230 : 270;
+    const mt = 12, mb = 28;
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', el.dataset.label || '');
+    const probe = svg.append('text').attr('x', -999).attr('y', -999);
+    const textW = (s, cls) => { probe.attr('class', cls).text(s); return probe.node().getComputedTextLength(); };
+
+    const vals = [];
+    for (const d of rows) for (const s of series) {
+      if (d[s.key] != null) vals.push(d[s.key]);
+      if (s.band && d.hi != null) vals.push(d.hi);
+    }
+    const y = d3.scaleLinear([Math.min(0, d3.min(vals)), (d3.max(vals) || 10) * 1.06], [H - mb, mt]).nice();
+    const yTicks = y.ticks(narrow ? 4 : 5);
+    const ml = Math.ceil(d3.max(yTicks, (t) => textW(fmt(t), 'tick'))) + 10;
+
+    const ends = series.map((s) => {
+      const last = [...rows].reverse().find((d) => d[s.key] != null);
+      return last ? { s, v: last[s.key], text: `${s.label} ${fmt(last[s.key])}` } : null;
+    }).filter(Boolean);
+    const mr = Math.ceil(d3.max(ends, (e) => textW(e.text, 'endlab')) || 0) + 22;
+    const x = d3.scaleUtc(d3.extent(rows, (d) => d.x), [ml, W - mr]);
+
+    const interval = range === '7d' ? d3.utcDay.every(narrow ? 2 : 1)
+      : range === '90d' ? d3.utcWeek.every(narrow ? 4 : 2)
+      : d3.utcMonth.every(narrow ? 4 : 2);
+    const xFmt = range === '7d' ? d3.utcFormat('%a %-d') : range === '90d' ? d3.utcFormat('%b %-d') : d3.utcFormat(narrow ? "%b '%y" : '%b %Y');
+    const xTicks = x.ticks(interval).map((t) => ({ t, label: xFmt(t), w: textW(xFmt(t), 'tick') }));
+    probe.remove();
+
+    const gid = `${el.id}-glow`;
+    // filter region in user space: a perfectly flat line keeps its glow
+    const f = svg.append('defs').append('filter').attr('id', gid).attr('filterUnits', 'userSpaceOnUse').attr('x', 0).attr('y', 0).attr('width', W).attr('height', H);
+    f.append('feGaussianBlur').attr('stdDeviation', 1.6).attr('result', 'b');
+    const fm = f.append('feMerge');
+    fm.append('feMergeNode').attr('in', 'b');
+    fm.append('feMergeNode').attr('in', 'SourceGraphic');
+
+    svg.append('g').selectAll('line').data(yTicks).join('line').attr('class', 'gridline')
+      .attr('x1', ml).attr('x2', W - mr).attr('y1', (t) => y(t)).attr('y2', (t) => y(t));
+    svg.append('g').selectAll('text').data(yTicks).join('text').attr('class', 'tick')
+      .attr('x', ml - 8).attr('y', (t) => y(t)).attr('dy', '0.32em').attr('text-anchor', 'end').text((t) => fmt(t));
+    svg.append('line').attr('class', 'axisline').attr('x1', ml).attr('x2', W - mr).attr('y1', y(0)).attr('y2', y(0));
+    let lastRight = -Infinity;
+    for (const d of xTicks) {
+      const cx = Math.min(W - mr - d.w / 2, Math.max(ml + d.w / 2, x(d.t)));
+      if (cx - d.w / 2 < lastRight + 10) continue;
+      lastRight = cx + d.w / 2;
+      svg.append('text').attr('class', 'tick').attr('x', cx).attr('y', H - 8).attr('text-anchor', 'middle').text(d.label);
+    }
+
+    for (const s of series.filter((s) => s.band)) {
+      const area = d3.area().defined((d) => d.lo != null && d.hi != null).x((d) => x(d.x)).y0((d) => y(d.lo)).y1((d) => y(d.hi));
+      svg.append('path').datum(rows).attr('d', area).style('fill', s.color).style('fill-opacity', 0.2);
+    }
+    for (const s of [...series].reverse()) {
+      const ln = d3.line().defined((d) => d[s.key] != null).x((d) => x(d.x)).y((d) => y(d[s.key]));
+      const p = svg.append('path').datum(rows).attr('class', s.dashed ? 'line line-ref' : 'line').attr('d', ln).style('stroke', s.color);
+      if (!s.dashed) p.attr('filter', `url(#${gid})`);
+    }
+
+    const placed = ends.map((e) => ({ ...e, y: y(e.v) })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < placed.length; i++) if (placed[i].y - placed[i - 1].y < 15) placed[i].y = placed[i - 1].y + 15;
+    const overflow = placed.length ? placed[placed.length - 1].y - (H - mb) : 0;
+    if (overflow > 0) placed.forEach((p) => { p.y -= overflow; });
+    for (const p of placed) {
+      svg.append('rect').attr('x', W - mr + 6).attr('y', p.y - 3.5).attr('width', 7).attr('height', 7).style('fill', p.s.color);
+      svg.append('text').attr('class', 'endlab').attr('x', W - mr + 17).attr('y', p.y).attr('dy', '0.32em').text(p.text);
+    }
+
+    const ruleLine = svg.append('line').attr('class', 'rule').attr('y1', mt).attr('y2', H - mb).style('opacity', 0);
+    const dots = series.map((s) => svg.append('circle').attr('class', 'hdot').attr('r', 4).style('fill', s.color).style('opacity', 0));
+    const tip = document.createElement('div');
+    tip.className = 'tip';
+    tip.hidden = true;
+    el.append(tip);
+    const when = range === '7d' ? d3.utcFormat('%a %b %-d, %H:00') : d3.utcFormat('%a %b %-d, %Y');
+    let current = -1;
+    const show = (i) => {
+      const d = rows[i];
+      if (!d) return;
+      current = i;
+      const cx = x(d.x);
+      ruleLine.attr('x1', cx).attr('x2', cx).style('opacity', 1);
+      series.forEach((s, j) => {
+        const val = d[s.key];
+        dots[j].attr('cx', cx).attr('cy', val == null ? mt : y(val)).style('opacity', val == null ? 0 : 1);
+      });
+      tip.replaceChildren();
+      const head = document.createElement('div');
+      head.className = 'tip-when';
+      head.textContent = when(d.x);
+      tip.append(head);
+      for (const s of series) {
+        const r = document.createElement('div');
+        r.className = 'tip-row';
+        const sw = document.createElement('span');
+        sw.className = 'tip-sw';
+        sw.style.background = s.color;
+        const t = document.createElement('span');
+        const val = d[s.key];
+        t.textContent = `${s.label}: ${val == null ? 'no reading' : `${fmt(val)} cfs`}${s.band && val != null ? ` (${fmt(d.lo)}–${fmt(d.hi)})` : ''}`;
+        r.append(sw, t);
+        tip.append(r);
+      }
+      tip.hidden = false;
+      const k = el.clientWidth / W;
+      const w = tip.offsetWidth;
+      let left = cx * k + 12;
+      if (left + w > el.clientWidth) left = cx * k - w - 12;
+      tip.style.left = `${Math.max(0, left)}px`;
+      tip.style.top = `${mt * k}px`;
+    };
+    const hide = () => {
+      current = -1;
+      ruleLine.style('opacity', 0);
+      dots.forEach((dt) => dt.style('opacity', 0));
+      tip.hidden = true;
+    };
+    const bis = d3.bisector((d) => d.x).center;
+    svg.append('rect').attr('x', ml).attr('y', mt).attr('width', Math.max(0, W - ml - mr)).attr('height', H - mt - mb)
+      .style('fill', 'transparent').style('cursor', 'crosshair')
+      .on('pointermove pointerdown', (ev) => { const [px] = d3.pointer(ev); show(bis(rows, x.invert(px))); })
+      .on('pointerleave', hide);
+    el.onkeydown = (ev) => {
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+        ev.preventDefault();
+        const step = ev.key === 'ArrowRight' ? 1 : -1;
+        show(current < 0 ? rows.length - 1 : Math.min(rows.length - 1, Math.max(0, current + step)));
+      } else if (ev.key === 'Escape') hide();
+    };
+    el.onblur = hide;
+  }
+
+  // ---------- state and wiring ----------
+  const state = { range: '7d', now: null, week: null, daily: null, dailyLoading: null, lastRefresh: 0 };
+  const flowEl = $('chart-flow');
+  const driversEl = $('chart-drivers');
+
+  function setStatus(kind, text) {
+    $('status').dataset.state = kind;
+    $('status-text').textContent = text;
+  }
+
+  function drawCharts() {
+    const src = state.range === '7d' ? state.week : state.daily;
+    for (const [el, series] of [[flowEl, SERIES.flow], [driversEl, SERIES.drivers]]) {
+      if (!src) { chartMessage(el, 'Loading…'); continue; }
+      if (!src.rows.length) { chartMessage(el, `Couldn't load readings from ${src.failed.join(' or ') || 'the gauges'}. Try Refresh.`, true); continue; }
+      drawChart(el, src.rows, series, state.range);
+    }
+  }
+
+  async function ensureDaily() {
+    const today = nowKey().slice(0, 10);
+    if (state.daily && state.daily.day === today && state.daily.rows.length) return;
+    if (!state.dailyLoading) {
+      state.dailyLoading = loadDaily().then((d) => { state.daily = d; }).finally(() => { state.dailyLoading = null; });
+    }
+    await state.dailyLoading;
+  }
+
+  async function refresh() {
+    setStatus('loading', 'Fetching telemetry…');
+    $('refresh').disabled = true;
+    try {
+      const [now, week] = await Promise.all([loadLatest(), loadWeek()]);
+      state.now = now;
+      state.week = week;
+      state.lastRefresh = Date.now();
+      renderNow(now);
+      drawMap(now);
+      if (state.range !== '7d') await ensureDaily();
+      drawCharts();
+      const failed = [...new Set([...now.failed, ...week.failed])];
+      const dwrTime = now.road ? fmtClock(clockDate(now.road.t)) : null;
+      const usgsTime = now.colona ? fmtClock(clockDate(now.colona.t)) : null;
+      const times = [dwrTime && `DWR ${dwrTime}`, usgsTime && `USGS ${usgsTime}`].filter(Boolean).join(' · ');
+      if (failed.length === 2) setStatus('error', "Can't reach DWR or USGS. Check your connection.");
+      else if (failed.length) setStatus('warn', `${failed[0]} unreachable · ${times}`);
+      else setStatus('ok', `Live · ${times}`);
+    } catch (err) {
+      setStatus('error', "Couldn't load readings. Check your connection.");
+    } finally {
+      $('refresh').disabled = false;
+    }
+  }
+
+  document.querySelectorAll('.seg button').forEach((b) => {
+    b.addEventListener('click', async () => {
+      state.range = b.dataset.range;
+      document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      if (state.range !== '7d') {
+        if (!state.daily) { chartMessage(flowEl, 'Loading history…'); chartMessage(driversEl, 'Loading history…'); }
+        await ensureDaily();
+      }
+      drawCharts();
+    });
+  });
+  $('refresh').addEventListener('click', refresh);
+
+  // Montrose clock
+  const clockFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZoneName: 'short' });
+  const tick = () => {
+    const parts = Object.fromEntries(clockFmt.formatToParts(new Date()).map((p) => [p.type, p.value]));
+    $('clock').textContent = `${parts.hour}:${parts.minute}:${parts.second}`;
+    $('clock-zone').textContent = parts.timeZoneName || 'MT';
+  };
+  tick();
+  setInterval(tick, 1000);
+
+  let resizeTimer = null;
+  const widths = new Map();
+  const ro = new ResizeObserver((entries) => {
+    let changed = false;
+    for (const en of entries) {
+      const w = Math.round(en.contentRect.width);
+      if (widths.get(en.target) !== w) { widths.set(en.target, w); changed = true; }
+    }
+    if (!changed) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { drawMap(state.now); drawCharts(); }, 120);
+  });
+  ro.observe(flowEl);
+  ro.observe($('map'));
+
+  setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, REFRESH_MINUTES * 60e3);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - state.lastRefresh > REFRESH_MINUTES * 60e3) refresh();
+  });
+
+  drawMap(null);
+  chartMessage(flowEl, 'Loading…');
+  chartMessage(driversEl, 'Loading…');
+  refresh();
+})();
+</script>
+</body>
+</html>
