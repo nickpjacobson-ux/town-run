@@ -340,7 +340,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
           <li><svg width="22" height="10" aria-hidden="true"><rect x="1" y="0" width="20" height="10" fill="var(--river)" opacity=".22"/></svg>Likely range</li>
           <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--phos)" stroke-width="2" stroke-dasharray="3 4"/></svg>Cow Creek routing, next hours</li>
           <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--river)" stroke-width="2" stroke-dasharray="8 5"/></svg>CBRFC river forecast</li>
-          <li><svg width="22" height="10" aria-hidden="true"><rect x="1" y="0.5" width="20" height="9" fill="var(--phos)" fill-opacity=".1" stroke="var(--phos)" stroke-opacity=".5" stroke-dasharray="3 3"/></svg>When a rise would arrive, if radar rain brings one</li>
+          <li><svg width="22" height="10" aria-hidden="true"><rect x="1" y="0.5" width="20" height="9" fill="var(--phos)" fill-opacity=".1" stroke="var(--phos)" stroke-opacity=".5" stroke-dasharray="3 3"/></svg>Radar: when a surge would arrive, and its chance</li>
         </ul>
         <div class="chart" id="chart-outlook" tabindex="0" data-label="Town-run flow at the park from a day ago to three days ahead, in cubic feet per second: estimated from gauges, routed from Cow Creek for the next few hours, and from the CBRFC river forecast. Arrow keys step through values."></div>
         <p class="hint">Times are when water reaches the park, about 2 hours after it passes the Road Bridge gauge. Canal diversions are held at their latest readings. Neither line is an official forecast for the park.</p>
@@ -351,7 +351,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
         <ul class="legend">
           <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--ink-2)" stroke-width="2.5"/></svg>Cow Creek gauge (COWCRKCO)</li>
           <li><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--ink-2)" stroke-width="2" stroke-dasharray="8 5"/></svg>CBRFC forecast</li>
-          <li><svg width="22" height="10" aria-hidden="true"><rect x="1" y="0.5" width="20" height="9" fill="var(--phos)" fill-opacity=".1" stroke="var(--phos)" stroke-opacity=".5" stroke-dasharray="3 3"/></svg>When a rise would peak, if radar rain brings one</li>
+          <li><svg width="22" height="10" aria-hidden="true"><rect x="1" y="0.5" width="20" height="9" fill="var(--phos)" fill-opacity=".1" stroke="var(--phos)" stroke-opacity=".5" stroke-dasharray="3 3"/></svg>When a surge would peak here, if radar rain brings one</li>
         </ul>
         <div class="chart" id="chart-cow" tabindex="0" data-label="Cow Creek flow at its gauge over the past day and CBRFC's forecast for the next three days, in cubic feet per second. Arrow keys step through values."></div>
         <p class="hint">Cow Creek drains 107 square miles of the San Juans and joins the river 2.4 km below Ridgway Dam, the largest stream the reservoir doesn't control. Water passing this gauge reaches the park about 5 hours later. Where the forecast line runs through the past, it shows how well it is tracking.</p>
@@ -433,7 +433,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       <ul>
         <li><strong>Cow Creek routing.</strong> Colona follows Cow Creek and the dam release about 2 hours later, and Road Bridge follows Colona about an hour after that, so the page can route the latest readings 3 to 5 hours ahead at the park. Fit hour by hour on <span class="fill-storms">72</span> summer storms (2016–2026) and tested a year at a time, it cut the average miss 3 hours ahead, while Cow Creek was rising, from 46 cfs (assuming no change) to 36. Timing is its strength; size is loose. The real rise typically came in at <span class="fill-rise-mid">0.8</span> times the routed one, and 2 times in 3 between <span class="fill-rise-lo">0.1</span> and <span class="fill-rise-hi">2</span> times, so the line is drawn at <span class="fill-rise-mid">0.8</span> with that range.</li>
         <li><strong>CBRFC forecast.</strong> NOAA's river forecast for the Road Bridge gauge (UNBC2) includes forecast rain. The page nudges it to match the latest reading, easing that correction out over about a day, then runs it through the same sum as the estimate.</li>
-        <li><strong>Radar odds.</strong> A model that turned radar rain into Cow Creek flow failed when tested a year at a time: at the start of the 24 biggest rises of 2021–2026 it called a real rise for none of them, because radar shows about the same rain for storms that do nothing and storms that send Cow Creek up hundreds of cfs. Radar does tell the odds. Fit hour by hour on the same years, the chance of a 20+ cfs Cow Creek rise within 12 hours rises with the last 6 hours of rain, the 72 hours before them and the last hour, and the 72-hour rain matters: at any 6-hour total, the wetter half of past hours had 1.5 to 2.5 times the odds. Tested a year at a time, its odds held up (hours given 20–35% saw a rise 32% of the time). The shaded window marks when such a rise would reach the park, with its typical size.</li>
+        <li><strong>Radar odds.</strong> A model that turned radar rain into Cow Creek flow failed when tested a year at a time: at the start of the 24 biggest rises of 2021–2026 it called a real rise for none of them, because radar shows about the same rain for storms that do nothing and storms that send Cow Creek up hundreds of cfs. Radar does tell the odds. Fit hour by hour on the same years, the chance of a 20+ cfs Cow Creek rise within 12 hours rises with the last 6 hours of rain, the 72 hours before them and the last hour, and the 72-hour rain matters: at any 6-hour total, the wetter half of past hours had 1.5 to 2.5 times the odds. The page gives the chance as a percentage of past cases, with a surge meaning Cow Creek up 20+ cfs within 12 hours (about +15 at the park). Tested a year at a time, the percentages held up through about 40% (hours put at 20–35% saw a surge 32% of the time) and ran high above that, so they're mapped onto what actually happened and top out at 60%. The shaded window marks when a surge would reach the park, with the typical size of past ones after similar rain.</li>
         <li><strong>Reservoir operators</strong> cut the release in 21 of 72 past storms, which shrinks a rise. The routing picks up a cut once it shows at the dam gauge; the CBRFC forecast may not.</li>
         <li><strong>Tried and dropped.</strong> Gauge-corrected rain, radar hail size, lightning and NOAA's National Water Model were each tested on 2021–2026, alone and blended. None could say how big a Cow Creek rise would be. Gauge-corrected rain improved the odds only slightly, hail and lightning made them worse, and the National Water Model's Cow Creek barely moved in 21 storms, even when driven by observed rain.</li>
       </ul>
@@ -501,9 +501,9 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   const RAIN_FETCH = ['01H', '06H', '24H', '72H'];   // 1, 6 and 24 h for the table and map; 1, 6 and 72 h for the chance of a rise
   // Chance of a storm rise on Cow Creek (20 cfs or more within 12 hours) from radar rain on its basin, in mm. Logistic, fit hour
   // by hour on Jul–Oct 2021–2026: logit = a + b·ln(1 + 6-h rain) + c·ln(1 + rain in the 66 h before that) + d·ln(1 + last hour).
-  // Tested a year at a time it ranked hours well (AUC 0.76) and its odds held up (hours given 20–35% saw a rise 32% of the time;
-  // above 50% it runs high, so the page never says more than "better than even"). Turning radar rain into a flow number
-  // failed the same test, so the page gives odds, timing and typical size instead.
+  // Tested a year at a time it ranked hours well (AUC 0.76). The page shows the chance as a percentage mapped onto how often a
+  // rise actually followed in that test (CHANCE_CAL): right on through about 40%, high above that, so it tops out at 60%.
+  // Turning radar rain into a flow number failed the same test, so the page gives odds, timing and typical size instead.
   const RAIN_CHANCE = {
     coef: [-4.269, 1.194, 0.559, 1.784], show: 0.15,
     // when a rise came, by 6-hour rain (mm): Cow Creek's rise (median and 1 in 5 above, cfs) and hours from the radar's
@@ -512,7 +512,16 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     toPark: 0.73,   // Cow Creek rise to park rise: 0.91 to Colona, 1.0 to Road Bridge, typically 0.8 of the routed rise
     hoursToPark: 5, // Cow Creek gauge to the park
   };
-  const oddsWords = (p) => (p >= 0.55 ? 'better than even' : p >= 0.4 ? 'about 1-in-2' : p >= 0.25 ? 'about 1-in-3' : 'about 1-in-5');
+  // model chance -> share of tested hours that saw a rise (leave-one-year-out bins, 2021–2026)
+  const CHANCE_CAL = [[0, 0], [0.02, 0.02], [0.06, 0.06], [0.14, 0.18], [0.27, 0.32], [0.42, 0.42], [0.59, 0.52], [0.8, 0.59], [1, 0.6]];
+  const calibrate = (p) => {
+    for (let i = 1; i < CHANCE_CAL.length; i++) {
+      const [x0, y0] = CHANCE_CAL[i - 1], [x1, y1] = CHANCE_CAL[i];
+      if (p <= x1) return y0 + ((y1 - y0) * (p - x0)) / (x1 - x0);
+    }
+    return 0.6;
+  };
+  const pct = (p) => `${Math.round(p * 20) * 5}%`;   // to the nearest 5%: the odds aren't finer than that
   const ERR_TUNNEL_ON = 0.10;  // per-gauge error while the tunnel runs (neighboring gauges compared, 2016–2026)
   const ERR_TUNNEL_OFF = 0.15; // per-gauge error with the tunnel off (low flows, ice)
   const TUNNEL_ON_CFS = 100;   // South Canal flow that counts as the tunnel running
@@ -1069,7 +1078,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       const T = +clockDate(localKey(rd.end));
       const r6 = rd.mean['06H'].cow, r72 = rd.mean['72H'].cow, r1 = rd.mean['01H'].cow;
       const [a, b, c, d] = RAIN_CHANCE.coef;
-      const p = 1 / (1 + Math.exp(-(a + b * Math.log1p(r6) + c * Math.log1p(Math.max(0, r72 - r6)) + d * Math.log1p(r1))));
+      const p = calibrate(1 / (1 + Math.exp(-(a + b * Math.log1p(r6) + c * Math.log1p(Math.max(0, r72 - r6)) + d * Math.log1p(r1)))));
       const bin = [...RAIN_CHANCE.bins].reverse().find((x) => r6 >= x.min);
       const fresh = Math.abs(+cw.x - T) <= 4 * HOUR && (Date.now() - rd.end) / HOUR <= 3;
       const gaugesHaveIt = out.nc && out.nc.rise >= RISE_NOTICE_CFS;   // once the routing shows a rise, the odds are moot
@@ -1153,8 +1162,8 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       short = `Forecast ~${fmt(o.fc.peak.est)}, ${fmtDayHour(new Date(o.fc.peak.x))}`;
     } else if (ch && ch.p >= 0.25) {
       level = 'watch';
-      head = `Radar rain on Cow Creek's basin: ${oddsWords(ch.p)} chance of a storm rise at the park, ${when(ch.parkWin[0])} to ${when(ch.parkWin[1])}.`;
-      short = `${oddsWords(ch.p).replace('about ', '~')} chance of a rise`;
+      head = `Radar rain on Cow Creek's basin: ${pct(ch.p)} chance of a storm surge at the park between ${when(ch.parkWin[0])} and ${when(ch.parkWin[1])}.`;
+      short = `${pct(ch.p)} chance of a surge`;
     } else if (o.nc && ncRise <= -RISE_NOTICE_CFS) {
       head = `Falling: down about ${fmt(-ncRise)} cfs at the park by ${fmtClock(new Date(o.nc.x))}.`;
       short = `Falling, ${fmt(ncRise)} by ${fmtClock(new Date(o.nc.x))}`;
@@ -1186,8 +1195,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     const unseen = wet.filter((b) => !BASIN_INFO[b].gauged).map((b) => BASIN_INFO[b].name);
     if (unseen.length) facts.push(`Radar shows rain on ${listFmt.format(unseen)}, which ${unseen.length > 1 ? 'join' : 'joins'} below every gauge, so runoff from it won't show in the estimate.`);
     if (ch) {
-      const odds = ch.p >= 0.55 ? 'more often than not' : `${oddsWords(ch.p).replace('-in-', ' in ').replace('about ', 'about ')} times`;
-      facts.push(`Radar: ${inches(ch.r6)} in of rain on Cow Creek's basin in the last 6 hours, ${inches(ch.r72)} in over 72 hours. After rain like this, Cow Creek rose 20+ cfs within 12 hours ${odds}; when it did, the park typically rose about ${fmt(ch.parkRise[0])} cfs (1 in 5 times, ${fmt(ch.parkRise[1])} or more), arriving ${when(ch.parkWin[0])} to ${when(ch.parkWin[1])}.`);
+      facts.push(`Radar: ${inches(ch.r6)} in of rain on Cow Creek's basin in the last 6 hours, ${inches(ch.r72)} in over 72 hours. After conditions like these, Cow Creek rose 20+ cfs within 12 hours ${pct(ch.p)} of the time. When it did, the park typically rose about ${fmt(ch.parkRise[0])} cfs (in 20% of cases, ${fmt(ch.parkRise[1])} or more), arriving between ${when(ch.parkWin[0])} and ${when(ch.parkWin[1])}.`);
     }
     $('outlook-head').textContent = head;
     $('outlook-head').dataset.level = level;
@@ -1752,8 +1760,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     const pk = o.fc && o.fc.peak.est - o.fc.base >= RISE_NOTICE_CFS
       ? { x: o.fc.peak.x, v: o.fc.peak.est, text: `peak ~${fmt(o.fc.peak.est)} · ${fmtDayHour(new Date(o.fc.peak.x))}`, color: 'var(--river)' } : null;
     const ch = o.chance && o.chance.p >= RAIN_CHANCE.show ? o.chance : null;
-    const odds = ch ? oddsWords(ch.p).replace('about ', '') : '';
-    const parkWin = ch ? [{ x0: ch.parkWin[0], x1: ch.parkWin[1], text: `radar: ${odds} chance`, sub: `typ. +${fmt(ch.parkRise[0])} cfs` }] : [];
+    const parkWin = ch ? [{ x0: ch.parkWin[0], x1: ch.parkWin[1], text: `radar: ${pct(ch.p)} chance of a surge`, sub: `typ. +${fmt(ch.parkRise[0])} cfs` }] : [];
     const cowWin = ch ? [{ x0: ch.cowWin[0], x1: ch.cowWin[1] }] : [];   // shading only: the park chart and the notes carry the words
     drawChart(parkEl, o.parkRows, SERIES.outlook, 'outlook', { domain, now: o.nowX, endLabels: false, peak: pk, skipMissing: true, windows: parkWin, empty: 'No estimate or forecast to show.' });
     const cpk = o.cowFc && o.cowFc.peak && o.route && o.cowFc.peak.q - o.route.cow >= 10
