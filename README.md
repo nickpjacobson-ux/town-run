@@ -46,6 +46,23 @@ Summer storms raise the town run mostly through creeks Ridgway Reservoir doesn't
    - *Radar does tell the odds.* A logistic model fit hour by hour on the same record gives the chance of a 20+ cfs Cow Creek rise within 12 hours from three radar numbers: the last 6 hours of rain, the 66 hours before them, and the last hour. Tested a year at a time it ranked hours well (area under the ROC curve 0.76, against 0.69 with 6-hour rain alone), and its odds held up: hours given 20–35% saw a rise 32% of the time; above about 50% it runs high, so the page never says more than "better than even." The 72-hour rain matters: at any 6-hour total, the wetter half of past hours had 1.5 to 2.5 times the odds.
    - When the chance is 15% or more, the outlook shades the hours a rise would reach the park, with the typical size of past rises after similar rain (for example, after 4 mm or more in 6 hours, a median 93 cfs at Cow Creek, about 68 at the park, peaking at the gauge 2–6 hours after the radar's latest hour). 6-hour totals of 4 mm (0.16 inch) or more show in green in the rain table.
 
+### Tried and dropped
+
+Each was tested on July–October 2021–2026 in 6-hour periods, leave-one-year-out (a coarser test than the page's hourly chance model, which scores 0.76 on its own), for the chance of a 20+ cfs Cow Creek rise and for its size (area under the ROC curve; 0.5 is a coin flip). Rain and hail came for every rainy period, the day before each rise and a fifth of dry periods; lightning for the rainy periods and the days before rises.
+
+| Signal (each with 72-hour rain) | Odds: AUC | Size of the rise |
+|---|---|---|
+| Radar-only rain (what the page uses) | 0.68 | not predictable |
+| Gauge-corrected rain (MRMS MultiSensor QPE, Pass 2) | 0.68 (false calls 43% vs 51%) | not predictable |
+| Radar hail size (MESH, 6-hour max) | 0.64 | not predictable |
+| Lightning (NLDN cloud-to-ground density) | 0.65 | not predictable |
+| All of them blended | 0.68 | not predictable |
+
+- The two rain sources differed most in October storms, when radar-only rain read about a third of the gauge-corrected amount. Gauge-corrected rain's small gain doesn't justify the scheduled server job the page would need to get it live (the browser-friendly radar service offers only radar-only rain).
+- Hail and lightning mark the most violent summer cells (July 29, 2026 had both), but most big rises, and all the October ones, had neither.
+- NOAA's National Water Model: its v3.0 retrospective, driven by observed rain, rose 0.4 cfs or less on Cow Creek (reach 9769820) in all 21 storms of 2021–2022, which rose 20–123 cfs at the gauge. On November 1, 2026 its live forecast stayed flat at 23 cfs while the creek rose past 200.
+- Extrapolating Cow Creek's own early rise didn't help either: after a 20+ cfs jump, the median further rise was 6 cfs.
+
 Reservoir operators cut the release in 21 of 72 past storms, which shrinks a rise. The routing picks up a cut once it shows at the dam gauge; the CBRFC forecast may not. Neither the routing nor the forecast is an official forecast for the park.
 
 ## What it leaves out
