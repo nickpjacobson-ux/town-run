@@ -669,7 +669,14 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     const rows = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
     let south = null;
     let lastOn = null;
-    return rows.map((r) => {
+    // the canal stations post later than Road Bridge, so the newest rows often lack them: carry each canal's last
+    // reading forward up to three rows, or the latest hours (and the outlook built on them) would have no estimate
+    const held = { md: null, lout: null }, age = { md: 0, lout: 0 };
+    return rows.map((row) => {
+      const r = { ...row };
+      for (const k of ['md', 'lout']) {
+        if (r[k] != null) { held[k] = r[k]; age[k] = 0; } else if (held[k] != null && ++age[k] <= 3) r[k] = held[k];
+      }
       const x = clockDate(r.key);
       const month = +r.key.slice(5, 7);
       if (r.south != null) south = r.south;
@@ -1169,7 +1176,9 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     if (o.fc) {
       const pk = o.fc.peak.est - o.fc.base >= RISE_NOTICE_CFS ? `peaks near ${fmt(o.fc.peak.est)} cfs at the park ${fmtDayHour(new Date(o.fc.peak.x))}` : `stays near ${fmt(o.fc.base)} cfs at the park`;
       facts.push(`CBRFC forecast, issued ${fmtClockDay(clockDate(localKey(o.fc.issued)))}: ${pk}.`);
-    } else facts.push(state.fc && state.fc.failed ? "Couldn't reach the CBRFC forecast." : 'No recent CBRFC forecast for the Road Bridge gauge.');
+    } else facts.push(state.fc && state.fc.failed ? "Couldn't reach the CBRFC forecast."
+      : state.fc && state.fc.road ? "The CBRFC forecast can't be turned into park flow until the canal gauges report."
+      : 'No recent CBRFC forecast for the Road Bridge gauge.');
     if (o.cowFc && o.cowFc.peak && o.route && o.cowFc.peak.q - o.route.cow >= 10) facts.push(`CBRFC expects Cow Creek to peak near ${fmt(o.cowFc.peak.q)} cfs ${fmtDayHour(new Date(o.cowFc.peak.x))}.`);
     const tr = o.cowFc && o.cowFc.track;
     if (tr && tr.fc - tr.obs >= 15 && tr.fc >= 1.5 * tr.obs) facts.push(`So far Cow Creek is running well below CBRFC's forecast (${fmt(tr.obs)} cfs against ~${fmt(tr.fc)} expected by now), so the forecast rise may come later or smaller.`);
