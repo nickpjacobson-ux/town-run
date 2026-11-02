@@ -386,7 +386,8 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       <div class="seg" id="range-seg" role="group" aria-label="Time range for both charts">
         <button type="button" data-range="7d" aria-pressed="true">7 days</button>
         <button type="button" data-range="90d" aria-pressed="false">90 days</button>
-        <button type="button" data-range="all" aria-pressed="false">Since 2025</button>
+        <button type="button" data-range="1y" aria-pressed="false">1 year</button>
+        <button type="button" data-range="5y" aria-pressed="false">5 years</button>
       </div>
     </div>
     <div class="charts">
@@ -418,11 +419,12 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       <p>The likely range assumes each gauge is good to about <strong class="fill-err-on">10</strong> percent while the tunnel runs and <strong class="fill-err-off">15</strong> percent when it's off: the typical disagreement between neighboring gauges with nothing entering or leaving between them. There's roughly a 2-in-3 chance the true flow falls inside it. It is widest when the canals take most of the river, because gauge errors add up while the flows cancel.</p>
       <ul>
         <li><strong>Dry Cedar Creek</strong> enters between Chipeta Lake and the park and isn't gauged. The page adds its typical flow from 34 USGS measurements (1991–2001): about 16 cfs while the tunnel runs, easing to about 2 cfs over the week after it shuts off. Piped laterals may have lowered it since.</li>
-        <li><strong>The Stark-Volkman Ditch</strong> has reported live only since September 2026. When it's silent, the page uses its typical diversion for the month from DWR's official records (2020–2025).</li>
+        <li><strong>The Stark-Volkman Ditch</strong> has reported live only since September 2026. When it's silent, the live estimate uses its typical diversion for the month from DWR's official records (2020–2025); the history charts use its actual daily records.</li>
         <li>Storm drains and irrigation return flows in town still aren't counted. Water takes about 2 hours to get from the Road Bridge gauge to the park, so the readout runs about 2 hours ahead of the park; the Outlook chart is drawn in park time.</li>
         <li>The City's park page shows an estimate built the same way, minus Dry Cedar Creek and the Stark-Volkman Ditch, so the two can differ by about 40 cfs in summer.</li>
         <li>No independent flow measurements at the park exist to check against. Volunteer readings in public databases track the Colona gauge, not the park.</li>
         <li>The canal stations go quiet in winter. The console then shows the last complete reading and says so.</li>
+        <li><strong>The history charts</strong> go back five years. They use DWR's official daily diversion records for the three canals where those are published (through October 2025 for the M&amp;D and Loutsenhizer canals), which also correct gauge readings that stuck while a canal shut down. In winter, with the tunnel off and the canal stations quiet, the canals count as off, as DWR's records show every December through February. Days when the canal gauges read more than the river carries are left blank.</li>
       </ul>
     </section>
     <section class="panel prose" aria-labelledby="t-how">
@@ -469,6 +471,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   // ---------- settings ----------
   const TZ = 'America/Denver';
   const DWR = 'https://dwr.state.co.us/Rest/GET/api/v2/telemetrystations/';
+  const DWR_STRUCT = 'https://dwr.state.co.us/Rest/GET/api/v2/structures/';
   const OGC = 'https://api.waterdata.usgs.gov/ogcapi/v0/collections/';
   const DWR_IDS = { road: 'UNCBRGCO', md: 'MANDCNCO', sv: '4100566A', lout: 'LOUTCNCO', up: 'UNCUPSCO', south: 'SOUCANCO', cow: 'COWCRKCO' };
   const USGS_IDS = { colona: 'USGS-09147500', ridgway: 'USGS-09147025' };
@@ -515,7 +518,9 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   const STALE_HOURS = 3;       // readings older than this get flagged
   const SV_MAX_AGE_HOURS = 24; // older Stark-Volkman readings give way to its typical diversion
   const REFRESH_MINUTES = 15;
-  const HISTORY_START = '2025-03-01';
+  const HISTORY_YEARS = 5;     // the longest history view
+  // the canals in DWR HydroBase, whose official daily diversion records back up the telemetry in the history charts
+  const WDIDS = { md: '4100545', lout: '4100537', sv: '4100566' };
   // Dry Cedar Creek isn't gauged: 34 USGS measurements near its mouth, 1991–2001, split Apr–Oct vs Nov–Mar (cfs)
   const DRY_CEDAR = { on: { q: 16.5, sd: 6.9 }, off: { q: 2.2, sd: 0.5 }, recedeDays: 7 };
   // Stark-Volkman Ditch typical diversion by month, [mean, sd] cfs, from DWR HydroBase daily records 2020–2025
@@ -670,12 +675,15 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       const tunnelOn = south != null && south > TUNNEL_ON_CFS;
       if (tunnelOn) lastOn = x;
       const m = model(r, { month, tunnelOn, recede: recedeShare(lastOn, x) });
+      // canal gauges reading more than the river carries, even allowing for gauge error, are a gauge problem (often a
+      // reading stuck while a canal shuts down): leave a gap rather than plot an impossible flow
+      const ok = m && m.hi >= 0;
       return {
         ...r,
         x,
-        est: m ? m.est : null,
-        lo: m ? m.lo : null,
-        hi: m ? m.hi : null,
+        est: ok ? Math.max(0, m.est) : null,
+        lo: ok ? m.lo : null,
+        hi: ok ? m.hi : null,
         canals: r.md != null && r.lout != null ? r.md + (r.sv ?? SV_TYPICAL[month - 1][0]) + r.lout : null,
       };
     });
@@ -742,9 +750,11 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
 
   async function loadDaily() {
     const today = nowKey().slice(0, 10);
-    const [dwr, usgs] = await Promise.allSettled([
-      getJSON(`${DWR}telemetrytimeseriesday/?format=json&parameter=DISCHRG&pageSize=50000&abbrev=${dwrList}&startDate=${mdy(HISTORY_START)}&endDate=${mdy(today)}`, 45000),
-      getText(`${OGC}daily/items?f=csv&skipGeometry=true&properties=monitoring_location_id,time,value&parameter_code=00060&statistic_id=00003&limit=10000&monitoring_location_id=${usgsList}&datetime=${HISTORY_START}/${today}`, 45000),
+    const start = `${+today.slice(0, 4) - HISTORY_YEARS}${today.slice(4).replace('-02-29', '-02-28')}`;
+    const [dwr, usgs, recs] = await Promise.allSettled([
+      getJSON(`${DWR}telemetrytimeseriesday/?format=json&parameter=DISCHRG&pageSize=50000&abbrev=${dwrList}&startDate=${mdy(start)}&endDate=${mdy(today)}`, 60000),
+      getText(`${OGC}daily/items?f=csv&skipGeometry=true&properties=monitoring_location_id,time,value&parameter_code=00060&statistic_id=00003&limit=10000&monitoring_location_id=${usgsList}&datetime=${start}/${today}`, 60000),
+      getJSON(`${DWR_STRUCT}divrec/divrecday/?format=json&pageSize=50000&wdid=${encodeURIComponent(Object.values(WDIDS).join(','))}&min-dataMeasDate=${mdy(start)}&max-dataMeasDate=${mdy(today)}`, 60000),
     ]);
     const rows = new Map();
     const row = (key) => { if (!rows.has(key)) rows.set(key, { key }); return rows.get(key); };
@@ -761,7 +771,32 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
         if (k) row(o.t.slice(0, 10))[k] = o.v;
       }
     } else failed.push('USGS');
-    return { rows: toRows(rows), failed, day: today };
+    // DWR's official daily diversion records (HydroBase), published a season or so behind, replace the canal telemetry
+    // where they exist: they're reviewed, and they catch readings that stuck while a canal shut down. The M&D and
+    // Loutsenhizer records list every day; the Stark-Volkman records skip days the ditch was off, so between its first and
+    // last record a missing day counts as off (before its telemetry began in 2026, that's the only record of it).
+    if (recs.status === 'fulfilled') {
+      const rec = Object.fromEntries(Object.keys(WDIDS).map((k) => [k, new Map()]));
+      const byWdid = Object.fromEntries(Object.entries(WDIDS).map(([k, w]) => [w, k]));
+      for (const r of recs.value.ResultList || []) {
+        const k = byWdid[r.wdid];
+        if (!k || r.dataValue == null || !r.dataMeasDate || !/Total/.test(r.wcIdentifier || '')) continue;
+        rec[k].set(r.dataMeasDate.slice(0, 10), +r.dataValue);
+      }
+      const svDays = [...rec.sv.keys()].sort();
+      for (const [key, r] of rows) {
+        for (const k of ['md', 'lout']) if (rec[k].has(key)) r[k] = rec[k].get(key);
+        if (r.sv == null && svDays.length && key >= svDays[0] && key <= svDays[svDays.length - 1]) r.sv = rec.sv.get(key) ?? 0;
+      }
+    }
+    // after the records end, winter leaves gaps: the canal stations go quiet once the canals shut. With the tunnel off,
+    // take the canals as off too, as DWR's records show every December through February.
+    for (const r of rows.values()) {
+      if (r.road == null || r.south == null || r.south >= TUNNEL_ON_CFS) continue;
+      if (r.md == null) r.md = 0;
+      if (r.lout == null) r.lout = 0;
+    }
+    return { rows: toRows(rows), failed, day: today, start };
   }
 
   // CBRFC forecasts through the National Water Prediction Service: hourly flow, UTC times
@@ -1523,8 +1558,8 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   function drawChart(el, allRows, series, range, opts = {}) {
     el.querySelectorAll('svg, .tip, .chart-msg').forEach((n) => n.remove());
     let rows = allRows;
-    if (range === '90d' && rows.length) {
-      const start = d3.utcDay.offset(rows[rows.length - 1].x, -89);
+    if ((range === '90d' || range === '1y') && rows.length) {
+      const start = d3.utcDay.offset(rows[rows.length - 1].x, range === '90d' ? -89 : -364);
       rows = rows.filter((d) => d.x >= start);
     }
     if (opts.domain) rows = rows.filter((d) => +d.x >= opts.domain[0] && +d.x <= opts.domain[1]);
@@ -1559,8 +1594,10 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     const interval = opts.domain ? d3.utcDay.every(1)
       : range === '7d' ? d3.utcDay.every(narrow ? 2 : 1)
       : range === '90d' ? d3.utcWeek.every(narrow ? 4 : 2)
-      : d3.utcMonth.every(narrow ? 4 : 2);
-    const xFmt = opts.domain || range === '7d' ? d3.utcFormat('%a %-d') : range === '90d' ? d3.utcFormat('%b %-d') : d3.utcFormat(narrow ? "%b '%y" : '%b %Y');
+      : range === '1y' ? d3.utcMonth.every(narrow ? 3 : 2)
+      : d3.utcYear.every(1);
+    const xFmt = opts.domain || range === '7d' ? d3.utcFormat('%a %-d') : range === '90d' ? d3.utcFormat('%b %-d')
+      : range === '1y' ? d3.utcFormat("%b '%y") : d3.utcFormat('%Y');
     const xTicks = x.ticks(interval).map((t) => ({ t, label: xFmt(t), w: textW(xFmt(t), 'tick') }));
     probe.remove();
 

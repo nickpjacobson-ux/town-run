@@ -18,7 +18,7 @@ town run ≈ Road Bridge gauge (DWR UNCBRGCO)
 - The three diversions between that gauge and Chipeta Lake are metered by DWR.
 - The West Canal takes its water off the South Canal by a flume over the river, so it never touches the river and isn't in the sum.
 - **Dry Cedar Creek** enters between Chipeta Lake and the park. Its typical flow comes from 34 USGS measurements near its mouth (1991–2001): 16.5 cfs (sd 6.9) from April through October and 2.2 cfs (sd 0.5) from November through March. The page uses the irrigation-season value while the tunnel runs (South Canal over 100 cfs), easing to the winter value over the 7 days after it shuts off. Lateral piping since then may have lowered it.
-- **Stark-Volkman Ditch** has live telemetry only since September 2026. When it has no reading in the last 24 hours, the page uses its typical diversion for the month from DWR HydroBase daily records, 2020–2025 (about 20–25 cfs May–September, 11 in October, 0 November–March).
+- **Stark-Volkman Ditch** has live telemetry only since September 2026. When it has no reading in the last 24 hours, the live estimate uses its typical diversion for the month from DWR HydroBase daily records, 2020–2025 (about 20–25 cfs May–September, 11 in October, 0 November–March).
 - The City of Montrose's park page publishes an estimate built the same way (Road Bridge − M&D − Loutsenhizer), without Dry Cedar Creek or the Stark-Volkman Ditch.
 
 ## The likely range and the gauge check
@@ -55,6 +55,15 @@ Reservoir operators cut the release in 21 of 72 past storms, which shrinks a ris
 - No independent flow measurements exist at the park. Colorado River Watch volunteer flow values in the Water Quality Portal for River Bottom Park and the Mayfly site track the Colona gauge almost exactly (median ratio 1.01), even on days when the canals were moving hundreds of cfs, so they don't work as a check.
 - The canal stations stop reporting in winter; the page then shows the last complete reading.
 
+## History charts
+
+The history section shows the last 7 days (hourly), 90 days, 1 year or 5 years (daily). For the daily views the page also pulls DWR HydroBase's official daily diversion records for the M&D Canal (WDID 4100545), Loutsenhizer Canal (4100537) and Stark-Volkman Ditch (4100566):
+
+- Where a record exists, it replaces the canal's telemetry. The records are reviewed, and they correct readings that stuck while a canal shut down (in March 2022 the M&D telemetry sat at 130 cfs for days, more than the river carried, while the official record shows the canal off). M&D and Loutsenhizer records run through October 2025 so far.
+- Stark-Volkman's records skip days the ditch was off, so between its first and last record a missing day counts as off. In July 2024, for example, it was off from July 8 to July 22, which the typical value would have missed by about 20 cfs.
+- After the records end, the canal stations go quiet each winter. With the tunnel off (South Canal under 100 cfs), the page takes the canals as off, which DWR's records show for every December through February.
+- Days when the canal gauges read more than the river carries, even allowing for gauge error, are left blank rather than plotted as an impossible flow.
+
 ## Data sources
 
 | Station | What it is | Agency |
@@ -67,6 +76,7 @@ Reservoir operators cut the release in 21 of 72 past storms, which shrinks a ris
 | UNCBRGCO | Uncompahgre River at Uncompahgre Road Bridge | Colorado DWR |
 | MANDCNCO | Montrose & Delta Canal | Colorado DWR |
 | 4100566A | Stark-Volkman Ditch (telemetry); WDID 4100566 (HydroBase records) | Colorado DWR |
+| 4100545, 4100537 | M&D and Loutsenhizer canals (HydroBase daily diversion records, for history) | Colorado DWR |
 | LOUTCNCO | Loutsenhizer Canal | Colorado DWR |
 | 382711107520101 | Dry Cedar Creek near mouth (field measurements, 1991–2001) | USGS |
 | UNBC2, COWC2 | River forecasts for Road Bridge and Cow Creek | NOAA CBRFC |
