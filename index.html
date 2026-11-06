@@ -424,7 +424,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
         <li>Storm drains and irrigation return flows in town still aren't counted. Water takes about 2 hours to get from the Road Bridge gauge to the park, so the readout runs about 2 hours ahead of the park; the Outlook chart is drawn in park time.</li>
         <li>The City's park page shows an estimate built the same way, minus Dry Cedar Creek and the Stark-Volkman Ditch, so the two can differ by about 40 cfs in summer.</li>
         <li>No independent flow measurements at the park exist to check against. Volunteer readings in public databases track the Colona gauge, not the park.</li>
-        <li>The canal stations go quiet in winter. The console then shows the last complete reading and says so.</li>
+        <li><strong>Winter canal gauges.</strong> The canal gauges are DWR seasonal stations and go dark for the winter, sometimes while a canal still carries stock water: on Nov 4, 2026, M&amp;D's went dark at 87 cfs, and the river at Olathe showed no sign the water came back. With the tunnel off, a dark canal keeps its last reading through November (up to 45 days), and the range runs up to the flow if it has shut off. From December through March, when DWR's records show the canals off every year, a dark canal counts as off. With the tunnel running, a dark canal means no estimate.</li>
         <li><strong>The history charts</strong> go back five years. They use DWR's official daily diversion records for the three canals where those are published (through October 2025 for the M&amp;D and Loutsenhizer canals), which also correct gauge readings that stuck while a canal shut down. In winter, with the tunnel off and the canal stations quiet, the canals count as off, as DWR's records show every December through February. Days when the canal gauges read more than the river carries are left blank.</li>
       </ul>
     </section>
@@ -698,24 +698,42 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   }
   // Dry Cedar Creek eases from its irrigation-season flow to its winter flow over the days after the tunnel shuts off
   const recedeShare = (lastOn, x) => (lastOn ? Math.max(0, 1 - (x - lastOn) / (DRY_CEDAR.recedeDays * 864e5)) : 0);
+  // The canal gauges are DWR seasonal stations. They go dark for the winter, sometimes while a canal still carries stock
+  // water (Nov 4, 2026: M&D went dark at 87 cfs, and the river at Olathe showed no sign the water came back). With the
+  // tunnel off, a dark canal keeps its last reading if it's under 45 days old, through November; after that, and from
+  // December through March, when DWR's records show the canals off every year, it counts as off. With the tunnel
+  // running, a dark canal means no estimate.
+  const CANAL_HOLD = { maxDays: 45, offMonths: [12, 1, 2, 3] };
+  function canalValue(live, last, month, tunnelOn, atKey) {
+    if (live != null) return { v: live, how: 'live' };
+    if (tunnelOn) return null;
+    const recent = last && (clockDate(atKey) - clockDate(last.t)) / 864e5 <= CANAL_HOLD.maxDays;
+    if (recent && !CANAL_HOLD.offMonths.includes(month)) return { v: last.v, how: last.v > 0 ? 'held' : 'off', t: last.t };
+    return { v: 0, how: 'off' };
+  }
 
-  function toRows(map) {
+  function toRows(map, seed = {}) {
     const rows = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
     let south = null;
     let lastOn = null;
     // the canal stations post later than Road Bridge, so the newest rows often lack them: carry each canal's last
-    // reading forward up to three rows, or the latest hours (and the outlook built on them) would have no estimate
-    const held = { md: null, lout: null }, age = { md: 0, lout: 0 };
-    return rows.map((row) => {
+    // reading forward up to three rows, or the latest hours (and the outlook built on them) would have no estimate.
+    // Past that, a canal whose gauge has gone dark follows canalValue.
+    const held = { md: null, lout: null }, age = { md: 0, lout: 0 }, real = { md: seed.md || null, lout: seed.lout || null };
+    const out = rows.map((row) => {
       const r = { ...row };
-      for (const k of ['md', 'lout']) {
-        if (r[k] != null) { held[k] = r[k]; age[k] = 0; } else if (held[k] != null && ++age[k] <= 3) r[k] = held[k];
-      }
       const x = clockDate(r.key);
       const month = +r.key.slice(5, 7);
       if (r.south != null) south = r.south;
       const tunnelOn = south != null && south > TUNNEL_ON_CFS;
       if (tunnelOn) lastOn = x;
+      let heldSum = 0;
+      for (const k of ['md', 'lout']) {
+        if (r[k] != null) { held[k] = r[k]; age[k] = 0; real[k] = { v: r[k], t: r.key }; continue; }
+        if (held[k] != null && ++age[k] <= 3) { r[k] = held[k]; continue; }
+        const c = canalValue(null, real[k], month, tunnelOn, r.key);
+        if (c) { r[k] = c.v; if (c.how === 'held') heldSum += c.v; }
+      }
       const m = model(r, { month, tunnelOn, recede: recedeShare(lastOn, x) });
       // canal gauges reading more than the river carries, even allowing for gauge error, are a gauge problem (often a
       // reading stuck while a canal shuts down): leave a gap rather than plot an impossible flow
@@ -725,10 +743,12 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
         x,
         est: ok ? Math.max(0, m.est) : null,
         lo: ok ? m.lo : null,
-        hi: ok ? m.hi : null,
+        hi: ok ? Math.max(m.hi, m.est + heldSum) : null,   // a held canal may have shut off since: the range runs up to that
         canals: r.md != null && r.lout != null ? r.md + (r.sv ?? SV_TYPICAL[month - 1][0]) + r.lout : null,
       };
     });
+    out.lastReal = real;   // each canal's last real reading, for the estimate right now
+    return out;
   }
 
   // ---------- data ----------
@@ -758,10 +778,18 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     const today = nowKey().slice(0, 10);
     const start = addDays(today, -7);
     const end = addDays(today, 1);
-    const [dwr, usgs] = await Promise.allSettled([
+    const [dwr, usgs, back] = await Promise.allSettled([
       getJSON(`${DWR}telemetrytimeserieshour/?format=json&parameter=DISCHRG&pageSize=50000&abbrev=${dwrList}&startDate=${mdy(start)}&endDate=${mdy(end)}`),
       getText(`${OGC}continuous/items?f=csv&skipGeometry=true&properties=monitoring_location_id,time,value&parameter_code=00060&limit=10000&monitoring_location_id=${usgsList}&datetime=${addDays(start, -1)}T00:00:00Z/${end}T12:00:00Z`),
+      getJSON(`${DWR}telemetrytimeseriesday/?format=json&parameter=DISCHRG&pageSize=500&abbrev=${DWR_IDS.md},${DWR_IDS.lout}&startDate=${mdy(addDays(today, -CANAL_HOLD.maxDays))}&endDate=${mdy(start)}`),
     ]);
+    const seed = {};
+    if (back.status === 'fulfilled') {
+      for (const r of back.value.ResultList || []) {
+        const k = dwrName[r.abbrev], day = (r.measDate || '').slice(0, 10);
+        if (k && r.measValue != null && day < start && (!seed[k] || seed[k].t < `${day}T12:00`)) seed[k] = { v: +r.measValue, t: `${day}T12:00` };
+      }
+    }
     const rows = new Map();
     const row = (key) => { if (!rows.has(key)) rows.set(key, { key }); return rows.get(key); };
     const failed = [];
@@ -787,7 +815,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       }
       for (const s of sums.values()) row(s.key)[s.k] = s.sum / s.n;
     } else failed.push('USGS');
-    return { rows: toRows(rows), failed };
+    return { rows: toRows(rows, seed), failed };
   }
 
   async function loadDaily() {
@@ -831,13 +859,8 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
         if (r.sv == null && svDays.length && key >= svDays[0] && key <= svDays[svDays.length - 1]) r.sv = rec.sv.get(key) ?? 0;
       }
     }
-    // after the records end, winter leaves gaps: the canal stations go quiet once the canals shut. With the tunnel off,
-    // take the canals as off too, as DWR's records show every December through February.
-    for (const r of rows.values()) {
-      if (r.road == null || r.south == null || r.south >= TUNNEL_ON_CFS) continue;
-      if (r.md == null) r.md = 0;
-      if (r.lout == null) r.lout = 0;
-    }
+    // after the records end, winter leaves gaps: the canal stations go dark for the season. toRows fills them by
+    // canalValue: with the tunnel off, the last reading through November, then off.
     return { rows: toRows(rows), failed, day: today, start };
   }
 
@@ -930,11 +953,19 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
   }
 
   function estimateNow(now, weekRows) {
-    if (!now.road || !now.md || !now.lout) return null;
+    if (!now.road) return null;
+    const ctx = nowContext(now, weekRows);
+    const last = (weekRows && weekRows.lastReal) || {};
+    const key = nowKey();
+    const canal = {};
+    for (const k of ['md', 'lout']) canal[k] = canalValue(now[k] ? now[k].v : null, last[k], ctx.month, ctx.tunnelOn, key);
+    if (!canal.md || !canal.lout) return null;
     const svFresh = !!now.sv && hoursAgo(now.sv.t) <= SV_MAX_AGE_HOURS;
-    const m = model({ road: now.road.v, md: now.md.v, lout: now.lout.v, sv: svFresh ? now.sv.v : null }, nowContext(now, weekRows));
-    const asof = [now.road.t, now.md.t, now.lout.t].sort()[0];
-    return { ...m, asof };
+    const m = model({ road: now.road.v, md: canal.md.v, lout: canal.lout.v, sv: svFresh ? now.sv.v : null }, ctx);
+    const heldSum = d3.sum(['md', 'lout'], (k) => (canal[k].how === 'held' ? canal[k].v : 0));
+    const asof = [now.road.t, ...['md', 'lout'].filter((k) => canal[k].how === 'live').map((k) => now[k].t)].sort()[0];
+    // a held canal may have shut off since its gauge went dark: the range runs up to that case
+    return { ...m, hi: Math.max(m.hi, m.est + heldSum), alt: heldSum ? m.est + heldSum : null, canal, asof };
   }
 
   // Gauge checks: 24-hour averages from the hourly rows, compared with what's normal
@@ -992,9 +1023,10 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     set('colona-now', now.colona ? num(now.colona.v) : '—');
     set('ridgway-now', now.ridgway ? num(now.ridgway.v) : '—');
     set('v-road', now.road ? num(now.road.v) : '—');
-    set('v-md', now.md ? num(now.md.v) : '—');
+    const canalText = (k) => (!e ? (now[k] ? num(now[k].v) : '—') : e.canal[k].how === 'live' ? num(e.canal[k].v) : typ(e.canal[k].v));
+    set('v-md', canalText('md'));
     set('v-sv', e ? (e.svTyp ? typ(e.sv) : num(e.sv)) : '—');
-    set('v-lout', now.lout ? num(now.lout.v) : '—');
+    set('v-lout', canalText('lout'));
     set('v-dc', e ? typ(e.dc) : '—');
     set('v-est', e ? num(e.est) : '—');
     document.querySelectorAll('.fill-err-on').forEach((el) => { el.textContent = fmt(ERR_TUNNEL_ON * 100); });
@@ -1011,7 +1043,12 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       const missing = ['road', 'md', 'lout'].filter((k) => !now[k]).map((k) => DWR_IDS[k]);
       notes.push(missing.length ? `No current reading from ${missing.join(', ')}, so there's no estimate right now.` : 'No estimate right now.');
     } else {
-      if (hoursAgo(e.asof) > STALE_HOURS) notes.push(`These readings are from ${fmtClockDay(clockDate(e.asof))}. The canal stations go quiet in winter, so this may be the last complete reading.`);
+      const names = { md: 'M&D Canal', lout: 'Loutsenhizer Canal' };
+      const held = ['md', 'lout'].filter((k) => e.canal[k].how === 'held');
+      const off = ['md', 'lout'].filter((k) => e.canal[k].how === 'off');
+      for (const k of held) notes.push(`The ${names[k]}'s gauge is off for the season. It was carrying ${fmt(e.canal[k].v)} cfs at ${fmtClockDay(clockDate(e.canal[k].t))}, and canals often carry stock water into November, so the estimate assumes it still is. If it has shut off, the town run is about ${fmt(e.alt)} cfs.`);
+      if (off.length) notes.push(`${listFmt.format(off.map((k) => names[k]))} ${off.length > 1 ? 'are' : 'is'} off for the season, so ${off.length > 1 ? 'they count' : 'it counts'} as zero.`);
+      if (hoursAgo(e.asof) > STALE_HOURS) notes.push(`These readings are from ${fmtClockDay(clockDate(e.asof))}.`);
       if (e.est < 0) notes.push('The gauges disagree by more than the water left in the river, so the town run is very low.');
     }
     if (odd) notes.push("The gauges don't add up right now (see Gauge check), so the estimate is less certain than its range shows.");
@@ -1035,6 +1072,10 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
       let stale = false;
       if (f.key === 'dc') { text = e ? typ(e.dc) : '—'; at = 'typ'; }
       else if (f.key === 'sv' && e && e.svTyp) { text = typ(e.sv); at = 'typ'; }
+      else if ((f.key === 'md' || f.key === 'lout') && e && e.canal[f.key].how !== 'live') {
+        const c = e.canal[f.key];
+        text = typ(c.v); at = c.how === 'held' ? 'held' : 'off';
+      }
       else { text = num(r ? r.v : null); at = r ? fmtShortTime(r.t) : '—'; stale = !!r && hoursAgo(r.t) > STALE_HOURS; }
       cell(tr, text, 'n');
       const t = cell(tr, at, 'n');
@@ -1100,13 +1141,18 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     const out = { x0, x1, nowX, route: null, nc: null, fc: null, cowFc: null };
     // canal diversions and context held at their latest readings
     const e = now ? estimateNow(now, rows) : null;
-    const canal = e ? { md: now.md.v, lout: now.lout.v, sv: e.svTyp ? null : e.sv } : null;
+    const canal = e ? { md: e.canal.md.v, lout: e.canal.lout.v, sv: e.svTyp ? null : e.sv } : null;
     const ctx = now ? nowContext(now, rows) : null;
-    const town = (road) => (canal ? model({ road, ...canal }, ctx) : null);
+    const town = (road) => {
+      const m = canal ? model({ road, ...canal }, ctx) : null;
+      if (m && e.alt != null) m.hi = Math.max(m.hi, m.est + (e.alt - e.est));   // a held canal may have shut off
+      return m;
+    };
     const rb = lastWith(rows, 'road');
     const startX = rb ? +rb.x + shift : null;
 
     const route = rows.length ? routeStorm(rows) : null;
+    if (route && !(canal && rb.est != null)) out.routeWhy = 'canals';
     if (route && canal && rb.est != null) {
       out.route = route;
       Object.assign(at(park, startX), { nc: Math.max(0, rb.est), nlo: rb.lo, nhi: rb.hi });
@@ -1266,7 +1312,7 @@ footer { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; border-t
     if (o.route) {
       const dir = o.route.cowRise == null ? '' : Math.abs(o.route.cowRise) < 3 ? ', steady' : o.route.cowRise > 0 ? `, up ${fmt(o.route.cowRise)} in 3 h` : `, down ${fmt(-o.route.cowRise)} in 3 h`;
       facts.push(`Cow Creek gauge: ${fmt(o.route.cow)} cfs at ${fmtClock(new Date(o.route.cowX))}${dir}. Its water reaches the park about 5 hours later.`);
-    } else facts.push("Cow Creek routing is off: the Cow Creek, Colona or dam gauge hasn't reported in the last few hours.");
+    } else facts.push(o.routeWhy === 'canals' ? "Cow Creek routing is off: it builds on the park estimate, which needs the canal gauges." : "Cow Creek routing is off: the Cow Creek, Colona or dam gauge hasn't reported in the last few hours.");
     if (o.fc) {
       const pk = o.fc.peak.est - o.fc.base >= RISE_NOTICE_CFS ? `peaks near ${fmt(o.fc.peak.est)} cfs at the park ${fmtDayHour(new Date(o.fc.peak.x))}` : `stays near ${fmt(o.fc.base)} cfs at the park`;
       facts.push(`CBRFC forecast, issued ${fmtClockDay(clockDate(localKey(o.fc.issued)))}: ${pk}.`);

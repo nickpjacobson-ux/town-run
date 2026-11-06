@@ -80,7 +80,7 @@ Reservoir operators cut the release in 21 of 72 past storms, which shrinks a ris
 - Storm drains and irrigation return flows in town aren't counted, so the park may run a little above the estimate after rain or heavy irrigation. Neither are Horsefly and Dry Cedar creeks' storm runoff; the page flags rain on them instead.
 - Travel time: the readout uses the latest readings, so it runs about 2 hours ahead of the park. The Outlook chart is drawn in park time.
 - No independent flow measurements exist at the park. Colorado River Watch volunteer flow values in the Water Quality Portal for River Bottom Park and the Mayfly site track the Colona gauge almost exactly (median ratio 1.01), even on days when the canals were moving hundreds of cfs, so they don't work as a check.
-- The canal stations stop reporting in winter; the page then shows the last complete reading.
+- The canal gauges are DWR seasonal stations and go dark for the winter, sometimes while a canal still carries stock water. On Nov 4, 2026, M&D's and Loutsenhizer's went dark in the same hour, with M&D still at 87 cfs, and DWR's Uncompahgre-near-Olathe gauge (UNCOLACO) showed no jump in the river below, which in past falls came the day M&D really shut off (Nov 2 in 2021, Nov 14 in 2023). So with the tunnel off, a dark canal keeps its last reading through November (if it's under 45 days old), and the range runs up to the flow if it has shut off. From December through March a dark canal counts as off, as DWR's records show every winter; with the tunnel running, a dark canal means no estimate.
 
 ## History charts
 
@@ -88,7 +88,7 @@ The history section shows the last 7 days (hourly), 90 days, 1 year or 5 years (
 
 - Where a record exists, it replaces the canal's telemetry. The records are reviewed, and they correct readings that stuck while a canal shut down (in March 2022 the M&D telemetry sat at 130 cfs for days, more than the river carried, while the official record shows the canal off). M&D and Loutsenhizer records run through October 2025 so far.
 - Stark-Volkman's records skip days the ditch was off, so between its first and last record a missing day counts as off. In July 2024, for example, it was off from July 8 to July 22, which the typical value would have missed by about 20 cfs.
-- After the records end, the canal stations go quiet each winter. With the tunnel off (South Canal under 100 cfs), the page takes the canals as off, which DWR's records show for every December through February.
+- After the records end, the history charts fill the winter gaps by the same rule as the live estimate: with the tunnel off (South Canal under 100 cfs), a dark canal keeps its last reading through November, then counts as off, which DWR's records show for every December through March.
 - Days when the canal gauges read more than the river carries, even allowing for gauge error, are left blank rather than plotted as an impossible flow.
 
 ## Data sources
